@@ -1,3 +1,6 @@
+# Installation-Specific Folders
+bin
+
 # Compiled Object files
 *.slo
 *.lo
