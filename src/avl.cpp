@@ -1,0 +1,8 @@
+
+namespace BST {
+
+  class AVL {
+
+  };
+
+}
