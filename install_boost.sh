@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # make bin and bin/opt directories
 echo Making directories...
 maindir=$(pwd)
