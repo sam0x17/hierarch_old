@@ -5,13 +5,15 @@
 
 namespace DFI {
 
-
+  class TNode;
 
   class DNode {
   public:
     int base_index;
     int rhs_offset;
+    int depth;
     void *tnode;
+    int tnode_depth;
     DNode *parent;
     DNode *left_child;
     DNode *right_child;
@@ -23,7 +25,6 @@ namespace DFI {
     TNode *parent;
     DNode *dnode;
     std::vector<TNode*> children;
-    int type;
     void *data;
   };
 
@@ -57,9 +58,14 @@ namespace DFI {
       cur_dnode->base_index = base_index;
       cur_dnode->rhs_offset = 0;
       cur_dnode->tnode = (void *)cur_tnode;
+      if(((TNode *)cur_dnode->tnode)->parent == NULL) {
+        cur_dnode->tnode_depth = 0;
+      } else {
+        cur_dnode->tnode_depth = ((TNode *)cur_dnode->tnode)->dnode->tnode_depth + 1;
+      }
       // add cur_dnode to red-black tree here
       for(TNode *child : cur_tnode->children) {
-
+        q.push(child);
       }
       this->size++;
       base_index++;
