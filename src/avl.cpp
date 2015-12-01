@@ -1,8 +1,5 @@
+#include "avl.hpp"
 
 namespace BST {
-
-  class AVL {
-
-  };
 
 }

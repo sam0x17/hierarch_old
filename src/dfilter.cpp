@@ -1,41 +1,6 @@
-#include <iostream>
-#include <vector>
-#include <queue>
-#include <map>
+#include "dfilter.hpp"
 
 namespace DFI {
-
-  class TNode;
-
-  class DNode {
-  public:
-    int base_index;
-    int rhs_offset;
-    int depth;
-    void *tnode;
-    int tnode_depth;
-    DNode *parent;
-    DNode *left_child;
-    DNode *right_child;
-    DNode *preorder_successor;
-  };
-
-  class TNode {
-  public:
-    TNode *parent;
-    DNode *dnode;
-    std::vector<TNode*> children;
-    void *data;
-  };
-
-  class DFilter {
-    TNode *troot;
-    int size;
-  public:
-    DFilter();
-    DFilter(TNode *root);
-    void generate_index(TNode *root);
-  };
 
   DFilter::DFilter() {
     this->troot = NULL;
@@ -57,7 +22,7 @@ namespace DFI {
       DNode *cur_dnode = new DNode();
       cur_dnode->base_index = base_index;
       cur_dnode->rhs_offset = 0;
-      cur_dnode->tnode = (void *)cur_tnode;
+      cur_dnode->tnode = cur_tnode;
       if(((TNode *)cur_dnode->tnode)->parent == NULL) {
         cur_dnode->tnode_depth = 0;
       } else {
@@ -84,12 +49,4 @@ namespace DFI {
     }
   }
 
-}
-
-int main() {
-  DFI::DNode d;
-  DFI::DFilter filter;
-  filter.generate_index(NULL);
-  //n.base_index = 10.4;
-  //printf("hey %f\n", n.base_index);
 }

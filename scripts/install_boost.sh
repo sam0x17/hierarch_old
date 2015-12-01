@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # make bin and bin/opt directories
+cd ..
 echo Making directories...
 maindir=$(pwd)
 mkdir -p bin
 cd bin
 bindir=$(pwd)
-cd ../
 mkdir -p bin/opt
 mkdir -p bin/opt/download
 mkdir -p bin/opt/boost_1_59_0

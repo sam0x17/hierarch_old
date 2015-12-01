@@ -6,7 +6,7 @@ maindir=$(pwd)
 mkdir -p bin
 cd bin
 bindir=$(pwd)
-cd ../
+cd ..
 mkdir -p bin/opt
 mkdir -p bin/opt/download
 mkdir -p bin/opt/libavl
