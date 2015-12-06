@@ -8,6 +8,9 @@ echo "processing prerequisites:"
 printf "checking for git... "
 command -v git >/dev/null 2>&1 || { echo "not installed, aborting..." >&2; exit 1; }
 echo "OK"
+printf "checking for graphviz... "
+command -v dot >/dev/null 2>&1 || { echo "not installed, aborting..." >&2; exit 1; }
+echo "OK"
 printf "checking for GNU LibAVL... "
 if [ ! -d "bin/usr/local/include/gnuavl" ]; then
   ./scripts/install_libavl.sh

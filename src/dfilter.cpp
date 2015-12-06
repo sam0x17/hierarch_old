@@ -1,6 +1,11 @@
 #include "dfilter.hpp"
 namespace DFI {
 
+  void TNode::add_child(TNode *child) {
+    child->parent = this;
+    this->children.push_back(child);
+  }
+
   int compare_dnodes(const void *pa, const void *pb, void *param)
   {
     DNode *nodeA = (DNode *)pa;
@@ -53,6 +58,7 @@ namespace DFI {
   void DFilter::generate_index(TNode *root) {
     std::cout << "Generating index..." << std::endl;
     std::queue<TNode*> q;
+    q.push(root); //TODO: fix this
     int base_index = 0;
     for(TNode *cur_tnode = root; cur_tnode == root || !q.empty(); cur_tnode = q.front(), q.pop()) {
       int tnode_depth = 0;

@@ -4,7 +4,6 @@
 #include <iostream>
 #include <vector>
 #include <queue>
-#include <map>
 extern "C" {
   #include "pavl.h"
 }
@@ -37,6 +36,8 @@ namespace DFI {
     DNode *dnode;
     std::vector<TNode*> children;
     void *data;
+    int type;
+    void add_child(TNode *child);
   };
 
   class DFilter {

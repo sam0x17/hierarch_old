@@ -1,63 +1,108 @@
 #include <iostream>
 #include "dfilter.hpp"
+#include "assert.h"
+#include <stdlib.h>
+#include <queue>
+#include <math.h>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <unordered_map>
+#include <random>
+std::random_device rd;
+
+#define ASIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 using namespace DFI;
 
-void tnode_connect(TNode *parent, TNode *child) {
-  parent->children.push_back(child);
-  child->parent = parent;
+std::string itos(int n) {
+  std::ostringstream ostream;
+  ostream << n;
+  return ostream.str();
+}
+
+int rand_int(int a, int b) {
+  std::default_random_engine el(rd());
+  std::uniform_int_distribution<int> uniform_dist(a, b);
+  uniform_dist(el);
+}
+
+bool maybe() {
+  return (bool)rand_int(0, 1);
+}
+
+TNode *random_node(int num_types) {
+  TNode *node = new TNode();
+  node->type = rand_int(0, num_types - 1);
+  return node;
+}
+
+TNode *generate_random_tree(int n, int branch_dist[], int dist_size, int num_types) {
+  TNode *root = random_node(num_types);
+  std::queue<TNode*> q;
+  q.push(root);
+  int total_nodes = 1;
+  while(!q.empty()) {
+    TNode *cur = q.front();
+    q.pop();
+    int sn = branch_dist[rand_int(0, dist_size - 1)];
+    if(sn == 0)
+      if(total_nodes == 1 || q.empty())
+        sn = 1;
+    for(int i = 0; i < sn; i++) {
+      total_nodes++;
+      TNode *node = random_node(num_types);
+      cur->add_child(node);
+      q.push(node);
+      if(total_nodes >= n) {
+        assert(total_nodes == n);
+        return root;
+      }
+    }
+  }
+  assert(total_nodes == n);
+  return root;
+}
+
+void tnode_to_dot(TNode *root, std::string path, std::string type_names[], int num_types) {
+  std::ofstream file;
+  file.open(path);
+  file << "graph {\n";
+  std::queue<TNode*> q;
+  q.push(root);
+  std::unordered_map<TNode*, std::string> node_names;
+  std::unordered_map<std::string, int> type_counts;
+  node_names[root] = type_names[root->type] + "1";
+  type_counts[type_names[root->type]] = 1;
+  while(!q.empty()) {
+    TNode *cur = q.front();
+    q.pop();
+    std::string parent_name = node_names[cur];
+    for(TNode *child : cur->children) {
+      std::string child_name = type_names[child->type];
+      auto got = type_counts.find(child_name);
+      int name_mod;
+      if(got == type_counts.end()) {
+        type_counts[child_name] = name_mod = 1;
+      } else {
+        type_counts[child_name] = name_mod = type_counts[child_name] + 1;
+      }
+      child_name = child_name + itos(name_mod);
+      node_names[child] = child_name;
+      file << "  " << parent_name << " -- " << child_name << ";\n";
+      q.push(child);
+    }
+  }
+  file << "}\n";
+  file.close();
 }
 
 int main() {
-  std::cout << "test started" << std::endl;
-  TNode root = TNode();
-  TNode nodeA = TNode();
-  TNode nodeB = TNode();
-  TNode nodeC = TNode();
-  TNode nodeD = TNode();
-  TNode nodeE = TNode();
-  TNode nodeF = TNode();
-  TNode nodeG = TNode();
-  TNode nodeH = TNode();
-  TNode nodeI = TNode();
-  TNode nodeJ = TNode();
-  TNode nodeK = TNode();
-  TNode nodeL = TNode();
-  TNode nodeM = TNode();
-  TNode nodeN = TNode();
-  TNode nodeO = TNode();
-  TNode nodeP = TNode();
-  TNode nodeQ = TNode();
-  TNode nodeR = TNode();
-  TNode nodeS = TNode();
-  root.parent = NULL;
-  tnode_connect(&root, &nodeA);
-  tnode_connect(&root, &nodeB);
-  tnode_connect(&root, &nodeC);
-  tnode_connect(&nodeA, &nodeD);
-  tnode_connect(&nodeB, &nodeE);
-  tnode_connect(&nodeE, &nodeF);
-  tnode_connect(&nodeE, &nodeG);
-  tnode_connect(&nodeG, &nodeH);
-  tnode_connect(&nodeH, &nodeI);
-  tnode_connect(&nodeI, &nodeJ);
-  tnode_connect(&nodeI, &nodeK);
-  tnode_connect(&nodeI, &nodeL);
-  tnode_connect(&nodeC, &nodeM);
-  tnode_connect(&nodeC, &nodeO);
-  tnode_connect(&nodeO, &nodeP);
-  tnode_connect(&nodeP, &nodeQ);
-  tnode_connect(&nodeQ, &nodeR);
-  //tnode_connect(&nodeR, &nodeS);
-  std::cout << "children: " << root.children.size() << std::endl;
-
-  DFilter filter;
-  filter = DFilter(&root);
-
-  for(TNode *cur = &nodeR; cur != NULL; cur = cur->parent) {
-    DNode *dnode = cur->dnode;
-    std::cout << "tnode: " << cur << std::endl;
-    if(dnode == NULL) continue;
-    std::cout << ((DNode *)dnode->pnode->pavl_data)->base_index << std::endl;
-    //std::cout << dnode->base_index << std::endl;
-  }
+  std::cout << "test suite started" << std::endl;
+  std::cout << "generating random tree" << std::endl;
+  std::string type_names[] = {"A", "B", "C", "D", "E", "F", "G"};
+  int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 5};
+  TNode *rootA = generate_random_tree(200, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
+  tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
+  std::cout << "done" << std::endl;
 }
