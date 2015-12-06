@@ -21,11 +21,12 @@ rm bin/opt/download/gnu* -r -f
 echo "downloading libavl..."
 cd bin/opt/download
 git clone git@github.com:gsauthof/gnulibavl-cmake.git
-curl -O http://ftp.gnu.org/gnu/avl/avl-2.0.3.tar.gz
-tar xf avl-2.0.3.tar.gz
-mv gnulibavl-cmake/* avl-2.0.3/
-mv avl-2.0.3/* ../libavl/
-rm avl-2.0.3 -r -f
+rm gnulibavl-cmake/.git -r -f
+git clone git@github.com:samkelly/libavl_fork.git
+rm libavl_fork/.git -r -f
+mv gnulibavl-cmake/* libavl_fork/
+mv libavl_fork/* ../libavl/
+rm libavl_fork -r -f
 cd ../libavl
 mkdir build
 cd build
@@ -33,6 +34,4 @@ echo "buliding libavl..."
 DESTDIR=$bindir cmake -C ../init.cmake -D LIB_SUB_DIR=lib ..
 echo "installing libavl..."
 DESTDIR=$bindir make install
-#cmake -C ../init.cmake ..
-#make
 echo "GNU LibAVL built and installed in $bindir"
