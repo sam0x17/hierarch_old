@@ -25,7 +25,6 @@ namespace DFI {
     struct pavl_node *pnode;
     DNode *preorder_successor;
 
-    DNode(DFilter *dfilter, TNode *tnode, unsigned int base_index, int rhs_offset, unsigned int tnode_depth);
     DNode *parent();
     DNode *left_child();
     DNode *right_child();
@@ -47,6 +46,7 @@ namespace DFI {
     DFilter();
     DFilter(TNode *root);
     void generate_index(TNode *root);
+    void assign_dnode(TNode *tnode, unsigned int base_index, int rhs_offset, unsigned int tnode_depth);
   };
 
 }

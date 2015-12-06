@@ -14,24 +14,18 @@ namespace DFI {
       return 0;
   }
 
-  DNode::DNode(DFilter *dfilter, TNode *tnode, unsigned int base_index, int rhs_offset, unsigned int tnode_depth) {
-    this->base_index = base_index;
-    this->rhs_offset = rhs_offset;
-    this->tnode = tnode;
-    tnode->dnode = this;
-    this->pnode = (struct pavl_node *)pavl_probe(dfilter->tbl, this);
-    std::cout << "index: " << this << " " << this->pnode << std::endl;
-  }
-
   DNode *DNode::parent() {
+    if(this->pnode == NULL || this->pnode->pavl_parent == NULL) return NULL;
     return (DNode *)(this->pnode->pavl_parent->pavl_data);
   }
 
   DNode *DNode::left_child() {
+    if(this->pnode == NULL || this->pnode->pavl_link[0] == NULL) return NULL;
     return (DNode *)(this->pnode->pavl_link[0]->pavl_data);
   }
 
   DNode *DNode::right_child() {
+    if(this->pnode == NULL || this->pnode->pavl_link[1] == NULL) return NULL;
     return (DNode *)(this->pnode->pavl_link[1]->pavl_data);
   }
 
@@ -46,6 +40,16 @@ namespace DFI {
     this->generate_index(root);
   }
 
+  void DFilter::assign_dnode(TNode *tnode, unsigned int base_index, int rhs_offset, unsigned int tnode_depth) {
+    DNode *d = tnode->dnode = new DNode();
+    std::cout << "base_index: " << base_index << " tnode: " << tnode << std::endl;
+    d->base_index = base_index;
+    d->rhs_offset = rhs_offset;
+    d->tnode_depth = tnode_depth;
+    d->tnode = tnode;
+    d->pnode = pavl_probe_node(this->tbl, d);
+  }
+
   void DFilter::generate_index(TNode *root) {
     std::cout << "Generating index..." << std::endl;
     std::queue<TNode*> q;
@@ -55,7 +59,8 @@ namespace DFI {
       if(cur_tnode->parent != NULL) {
         tnode_depth = cur_tnode->parent->dnode->tnode_depth + 1;
       }
-      new DNode(this, cur_tnode, base_index, 0, tnode_depth);
+      this->assign_dnode(cur_tnode, base_index, 0, tnode_depth);
+      std::cout << cur_tnode->dnode->base_index << std::endl;
       for(TNode *child : cur_tnode->children) {
         q.push(child);
       }

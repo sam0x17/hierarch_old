@@ -47,18 +47,17 @@ int main() {
   tnode_connect(&nodeO, &nodeP);
   tnode_connect(&nodeP, &nodeQ);
   tnode_connect(&nodeQ, &nodeR);
-  tnode_connect(&nodeR, &nodeS);
+  //tnode_connect(&nodeR, &nodeS);
   std::cout << "children: " << root.children.size() << std::endl;
 
-  DFilter *filter;
-  filter = new DFilter(&root);
+  DFilter filter;
+  filter = DFilter(&root);
 
-  for(TNode *cur = &nodeS; cur != NULL; cur = cur->parent) {
+  for(TNode *cur = &nodeR; cur != NULL; cur = cur->parent) {
     DNode *dnode = cur->dnode;
-    struct pavl_node *pnode = dnode->pnode;
-    std::cout << (long)pnode << std::endl;
-    std::cout << "test" << std::endl;
+    std::cout << "tnode: " << cur << std::endl;
+    if(dnode == NULL) continue;
+    std::cout << ((DNode *)dnode->pnode->pavl_data)->base_index << std::endl;
+    //std::cout << dnode->base_index << std::endl;
   }
-
-  free(filter);
 }
