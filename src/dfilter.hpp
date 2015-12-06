@@ -5,23 +5,31 @@
 #include <vector>
 #include <queue>
 #include <map>
-#include "avl.hpp"
+extern "C" {
+  #include "pavl.h"
+}
 
 namespace DFI {
 
+  int compare_dnodes(const void *pavl_a, const void *pavl_b, void *pavl_param);
+
   class TNode;
+  class DFilter;
 
   class DNode {
   public:
-    int base_index;
+    unsigned int base_index;
     int rhs_offset;
-    int depth;
     TNode *tnode;
-    int tnode_depth;
-    DNode *parent;
-    DNode *left_child;
-    DNode *right_child;
+    unsigned int tnode_depth;
+    struct pavl_node *pnode;
     DNode *preorder_successor;
+
+    DNode(DFilter *dfilter, TNode *tnode, unsigned int base_index, int rhs_offset, unsigned int tnode_depth);
+    DNode *parent();
+    DNode *left_child();
+    DNode *right_child();
+
   };
 
   class TNode {
@@ -33,9 +41,9 @@ namespace DFI {
   };
 
   class DFilter {
-    TNode *troot;
-    int size;
   public:
+    TNode *troot;
+    struct pavl_table *tbl;
     DFilter();
     DFilter(TNode *root);
     void generate_index(TNode *root);
