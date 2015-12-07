@@ -36,8 +36,9 @@ namespace DFI {
     DNode *dnode;
     std::vector<TNode*> children;
     void *data;
-    int type;
+    int type = 0;
     void add_child(TNode *child);
+    static void delete_tree(TNode *&root);
   };
 
   class DFilter {

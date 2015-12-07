@@ -105,4 +105,5 @@ int main() {
   TNode *rootA = generate_random_tree(200, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
   tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
   std::cout << "done" << std::endl;
+  TNode::delete_tree(rootA);
 }

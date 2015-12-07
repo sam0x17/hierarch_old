@@ -6,6 +6,19 @@ namespace DFI {
     this->children.push_back(child);
   }
 
+  void TNode::delete_tree(TNode *&root) {
+    std::queue<TNode*> q;
+    q.push(root);
+    while(!q.empty()) {
+      TNode *cur = q.front();
+      q.pop();
+      for(TNode *child : cur->children)
+        q.push(child);
+      delete cur;
+    }
+    root = NULL;
+  }
+
   int compare_dnodes(const void *pa, const void *pb, void *param)
   {
     DNode *nodeA = (DNode *)pa;
