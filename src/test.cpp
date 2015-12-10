@@ -135,12 +135,14 @@ void test_generate_random_tree() {
 
 int main() {
   std::cout << "test suite started" << std::endl;
-  /*std::cout << "generating random tree" << std::endl;
+  std::cout << "generating random tree" << std::endl;
   std::string type_names[] = {"A", "B", "C", "D", "E", "F", "G"};
   int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 5};
   TNode *rootA = generate_random_tree(200, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
   tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
-  std::cout << "done" << std::endl;
-  TNode::delete_tree(rootA);*/
+  std::cout << "generating index..." << std::endl;
+  DFilter filter = DFilter(rootA);
+
+  TNode::delete_tree(rootA);
   test_generate_random_tree();
 }
