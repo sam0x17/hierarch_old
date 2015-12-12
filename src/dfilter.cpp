@@ -49,15 +49,23 @@ namespace DFI {
   DNode *DNode::postorder_successor() {
     assert(this->slink != NULL);
     assert(this->dfilter != NULL);
-    //assert(this->dfilter->successor_map.find(this->slink->smap_id) != this->dfilter->successor_map.end());
     return this->dfilter->successor_map[this->slink->smap_id];
   }
 
   DNode *DNode::avl_parent() {
     assert(this->pnode != NULL);
-    assert(this->pnode->pavl_parent != NULL);
+    if(this->pnode->pavl_parent == NULL)
+      return NULL;
     assert(this->pnode->pavl_parent->pavl_data != NULL);
     return pavl_dnode(this->pnode->pavl_parent);
+  }
+
+  DNode *DNode::type_avl_parent() {
+    assert(this->type_pnode != NULL);
+    if(this->type_pnode->pavl_parent == NULL)
+      return NULL;
+    assert(this->type_pnode->pavl_parent->pavl_data != NULL);
+    return pavl_dnode(this->type_pnode->pavl_parent);
   }
 
   bool DNode::pnode_is_rhs() {
@@ -66,14 +74,26 @@ namespace DFI {
     return this->pnode->pavl_parent->pavl_link[1] == this->pnode;
   }
 
+  bool DNode::type_pnode_is_rhs() {
+    assert(this->type_pnode != NULL);
+    assert(this->type_pnode->pavl_parent != NULL);
+    return this->type_pnode->pavl_parent->pavl_link[1];
+  }
+
   bool DNode::pnode_has_children() {
     assert(this->pnode != NULL);
     return this->pnode->pavl_link[0] != NULL || this->pnode->pavl_link[1] != NULL;
   }
 
+  bool DNode::type_pnode_has_children() {
+    assert(this->type_pnode != NULL);
+    return this->type_pnode->pavl_link[0] != NULL || this->type_pnode->pavl_link[1] != NULL;
+  }
+
   // O(log(n)) if mod_num is out of date
   // O(1) if mod_num is up to date
   // updates mod_num if not already up to date
+  // also updates type dfi
   unsigned int DNode::dfi() {
     if(this->mod_num < this->dfilter->latest_mod) {
       // must update base_index
@@ -117,12 +137,14 @@ namespace DFI {
     this->generate_index(root);
   }
 
-  void DFilter::assign_dnode(TNode *tnode, unsigned int base_index, int rhs_offset) {
+  void DFilter::assign_dnode(TNode *tnode, unsigned int base_index, unsigned int type_base_index, int rhs_offset, int type_rhs_offset) {
     DNode *d = tnode->dnode = new DNode();
     d->mod_num = this->latest_mod;
     d->dfilter = this;
     d->base_index = base_index;
+    d->type_base_index = type_base_index;
     d->rhs_offset = rhs_offset;
+    d->type_rhs_offset = type_rhs_offset;
     d->tnode = tnode;
     tnode->dnode = d;
     d->smap_id = ++this->last_smap_id;
@@ -161,10 +183,15 @@ namespace DFI {
     return (DNode *)this->tbl->pavl_root->pavl_data;
   }
 
+  int DFilter::num_nodes_of_type(int type) {
+    return (int)(this->acquire_type_table(type)->pavl_count);
+  }
+
   int generate_index_helper(DFilter *dfilter, TNode *node, int *current_index, std::unordered_map<DNode*, int> *reverse_smap) {
     (*current_index)++;
     int base_index = (*current_index);
-    dfilter->assign_dnode(node, *current_index, 0);
+    int type_base_index = dfilter->num_nodes_of_type(node->type);
+    dfilter->assign_dnode(node, *current_index, type_base_index, 0, 0);
     dfilter->successor_map[*current_index] = node->dnode; // default sm_ids to base_index
     int last_index = base_index;
     for(TNode *child : node->children)

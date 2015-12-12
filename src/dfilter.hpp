@@ -37,10 +37,12 @@ namespace DFI {
     unsigned int dfi();
     unsigned int type_dfi();
     DNode *avl_parent();
+    DNode *type_avl_parent();
     DNode *postorder_successor();
     bool pnode_is_rhs();
-    bool pnode_has_children();
     bool type_pnode_is_rhs();
+    bool pnode_has_children();
+    bool type_pnode_has_children();
   };
 
   class TNode {
@@ -69,7 +71,6 @@ namespace DFI {
     unsigned int size;
     struct pavl_table *tbl;
     std::unordered_map<int, struct pavl_table*> type_tables;
-    std::unordered_map<int, int> latest_type_mods;
     std::unordered_map<int, DNode*> successor_map;
     //TODO: destructor (can call delete_tree) but must delete type_tables, etc
 
@@ -78,8 +79,9 @@ namespace DFI {
     DNode *avl_root();
     DNode *type_avl_root();
     void generate_index(TNode *root);
-    void assign_dnode(TNode *tnode, unsigned int base_index, int rhs_offset);
+    void assign_dnode(TNode *tnode, unsigned int base_index, unsigned int type_base_index, int rhs_offset, int type_rhs_offset);
     struct pavl_table *acquire_type_table(int type);
+    int num_nodes_of_type(int type);
     DNode *avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child);
   };
 
