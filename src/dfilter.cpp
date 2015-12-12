@@ -8,16 +8,23 @@ namespace DFI {
 
   void TNode::delete_tree(TNode *&root) {
     std::queue<TNode*> q;
+    std::unordered_set<SLink*> slinks;
     q.push(root);
     while(!q.empty()) {
       TNode *cur = q.front();
       q.pop();
       for(TNode *child : cur->children)
         q.push(child);
-      if(cur->dnode != NULL)
+      if(cur->dnode != NULL) {
+        assert(cur->dnode->slink != NULL);
+        slinks.insert(cur->dnode->slink);
         delete cur->dnode;
+      }
       delete cur;
     }
+    for(SLink *slink : slinks)
+      delete slink;
+    slinks.clear();
     root = NULL;
   }
 
@@ -34,11 +41,23 @@ namespace DFI {
       return 0;
   }
 
+  DNode *pavl_dnode(struct pavl_node *node) {
+    assert(node != NULL);
+    return (DNode *)node->pavl_data;
+  }
+
+  DNode *DNode::postorder_successor() {
+    assert(this->slink != NULL);
+    assert(this->dfilter != NULL);
+    //assert(this->dfilter->successor_map.find(this->slink->smap_id) != this->dfilter->successor_map.end());
+    return this->dfilter->successor_map[this->slink->smap_id];
+  }
+
   DNode *DNode::avl_parent() {
     assert(this->pnode != NULL);
     assert(this->pnode->pavl_parent != NULL);
     assert(this->pnode->pavl_parent->pavl_data != NULL);
-    return (DNode *)this->pnode->pavl_parent->pavl_data;
+    return pavl_dnode(this->pnode->pavl_parent);
   }
 
   bool DNode::pnode_is_rhs() {
@@ -58,31 +77,24 @@ namespace DFI {
   unsigned int DNode::dfi() {
     if(this->mod_num < this->dfilter->latest_mod) {
       // must update base_index
-      std::cout << "method call" << std::endl;
       assert(this != this->dfilter->avl_root());
       assert(this->pnode != NULL);
       assert(this->pnode->pavl_parent != NULL);
       DNode *avl_parent = this->avl_parent();
       if(this->pnode_is_rhs()) {
-        std::cout << "RHS" << std::endl;
         // this is a RHS node (in AVL tree)
         avl_parent->dfi(); // update parent dfi
         this->base_index += avl_parent->rhs_offset;
-        if(avl_parent->pnode_has_children()) {
+        if(avl_parent->pnode_has_children())
           this->rhs_offset += avl_parent->rhs_offset;
-          std::cout << "has children" << std::endl;
-        }
         avl_parent->rhs_offset = 0;
       } else {
         // this is a LHS node (in AVL tree)
-        std::cout << "LHS" << std::endl;
         int orig_parent_index = avl_parent->base_index;
         int diff = avl_parent->dfi() - orig_parent_index;
         this->base_index += diff;
-        if(this->pnode_has_children()) {
+        if(this->pnode_has_children())
           this->rhs_offset += diff;
-          std::cout << "has children" << std::endl;
-        }
       }
       this->mod_num = avl_parent->mod_num;
     }
@@ -90,29 +102,16 @@ namespace DFI {
     return this->base_index;
   }
 
-/*
-  DNode *DNode::parent() {
-    if(this->pnode == NULL || this->pnode->pavl_parent == NULL) return NULL;
-    return (DNode *)(this->pnode->pavl_parent->pavl_data);
-  }
-
-  DNode *DNode::left_child() {
-    if(this->pnode == NULL || this->pnode->pavl_link[0] == NULL) return NULL;
-    return (DNode *)(this->pnode->pavl_link[0]->pavl_data);
-  }
-
-  DNode *DNode::right_child() {
-    if(this->pnode == NULL || this->pnode->pavl_link[1] == NULL) return NULL;
-    return (DNode *)(this->pnode->pavl_link[1]->pavl_data);
-  }
-*/
-
   DFilter::DFilter() {
+    this->imaginary_smap_id = -1;
     this->tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     this->troot = NULL;
+    this->latest_mod = 0;
+    this->last_smap_id = 0;
   }
 
   DFilter::DFilter(TNode *root) {
+    this->imaginary_smap_id = -1;
     this->tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     this->troot = root;
     this->generate_index(root);
@@ -126,8 +125,25 @@ namespace DFI {
     d->rhs_offset = rhs_offset;
     d->tnode = tnode;
     tnode->dnode = d;
+    d->smap_id = ++this->last_smap_id;
+
+    // set up pavl nodes
     d->pnode = pavl_probe_node(this->tbl, d);
     d->type_pnode = pavl_probe_node(this->acquire_type_table(tnode->type), d);
+
+    // set up incoming s-link
+    this->successor_map[d->smap_id] = d;
+  }
+
+  DNode *DFilter::avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child) {
+    DNode *d = tnode->dnode = new DNode();
+    d->mod_num = ++this->latest_mod;
+    d->dfilter = this;
+    d->base_index = pavl_dnode(parent)->base_index;
+    d->rhs_offset = 1; //TODO: still need to propogate offset up unless it has been propogated already
+
+    //pavl_insert_in_place(struct pavl_table *tree, void *item, struct pavl_node *parent, int dir, struct pavl_node *child);
+    return NULL;
   }
 
   struct pavl_table *DFilter::acquire_type_table(int type) {
@@ -144,50 +160,51 @@ namespace DFI {
     return (DNode *)this->tbl->pavl_root->pavl_data;
   }
 
-  void DFilter::generate_index(TNode *root) {
-    this->latest_mod = 0;
-    std::cout << "Generating index..." << std::endl;
-    std::queue<TNode*> q;
-    q.push(root);
-    int base_index = 0;
-    DNode *target_node = NULL;
-    while(!q.empty()) {
-      TNode *cur_tnode = q.front();
-      q.pop();
-      /*int tnode_depth = 0;
-      if(cur_tnode->parent != NULL) {
-        tnode_depth = cur_tnode->parent->dnode->tnode_depth + 1;
-      }*/
-      this->assign_dnode(cur_tnode, base_index, 0);
-      std::cout << cur_tnode->dnode->base_index << std::endl;
-      for(TNode *child : cur_tnode->children) {
-        q.push(child);
-      }
-      base_index++;
-      if(base_index == 150)
-        target_node = cur_tnode->dnode;
-    }
-    std::cout << "done generating index" << std::endl;
-    std::cout << "size of AVL tree: " << this->tbl->pavl_count << std::endl;
-    std::cout << "number of avl type trees: " << this->type_tables.size() << std::endl;
-    std::cout << "original index: " << target_node->dfi() << std::endl;
-    this->avl_root()->mod_num = 1;
-    this->avl_root()->base_index += 1;
-    this->avl_root()->rhs_offset += 1;
-    this->latest_mod = 1;
-    std::cout << "result of changing index: " << target_node->dfi() << std::endl;
-    std::cout << "result of changing index: " << target_node->dfi() << std::endl;
+  int generate_index_helper(DFilter *dfilter, TNode *node, int *current_index, std::unordered_map<DNode*, int> *reverse_smap) {
+    (*current_index)++;
+    int base_index = (*current_index);
+    dfilter->assign_dnode(node, *current_index, 0);
+    dfilter->successor_map[*current_index] = node->dnode; // default sm_ids to base_index
+    int last_index = base_index;
+    for(TNode *child : node->children)
+      last_index = generate_index_helper(dfilter, child, current_index, reverse_smap);
+    int postorder_successor_index = last_index + 1;
+    (*reverse_smap)[node->dnode] = postorder_successor_index;
+    assert(base_index == node->dnode->base_index);
+    assert(base_index == node->dnode->smap_id);
+    return base_index;
   }
-
-  void dfi_propagate_offset(DNode *node, int offset) {
-    int orig_base_index = node->base_index;
-    DNode *cur = node;
-    for(cur = node; cur->tnode->parent != NULL; cur = cur->tnode->parent->dnode) {
-      if(cur->base_index >= orig_base_index) {
-        cur->base_index += offset;
-        cur->rhs_offset += offset;
+  void DFilter::generate_index(TNode *root) {
+    this->imaginary_smap_id = -1;
+    this->latest_mod = -1;
+    this->last_smap_id = -1;
+    int current_index = -1;
+    std::unordered_map<DNode*, int> reverse_smap;
+    generate_index_helper(this, root, &current_index, &reverse_smap);
+    // set up SLinks
+    std::unordered_map<int, SLink*> slink_map;
+    for(auto kv : reverse_smap) {
+      DNode *node = kv.first;
+      int smap_id = kv.second;
+      SLink *slink;
+      // find an existing slink pointing to target node, or create new one
+      if(slink_map.find(smap_id) == slink_map.end()) {
+        slink = new SLink();
+        slink->incoming_links = 0;
+        slink->smap_id = smap_id;
+        slink_map[smap_id] = slink;
+      } else {
+        slink = slink_map[smap_id];
+        slink->incoming_links++;
+      }
+      node->slink = slink;
+      if(this->successor_map[smap_id] == NULL) {
+        assert(this->imaginary_smap_id == -1 || this->imaginary_smap_id == smap_id);
+        this->imaginary_smap_id = smap_id;
       }
     }
+    slink_map.clear();
+    reverse_smap.clear();
   }
 
 }
