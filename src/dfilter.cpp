@@ -106,14 +106,14 @@ namespace DFI {
     this->imaginary_smap_id = -1;
     this->tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     this->troot = NULL;
-    this->latest_mod = 0;
-    this->last_smap_id = 0;
+    this->size = 0;
   }
 
   DFilter::DFilter(TNode *root) {
     this->imaginary_smap_id = -1;
     this->tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     this->troot = root;
+    this->size = 0;
     this->generate_index(root);
   }
 
@@ -126,6 +126,7 @@ namespace DFI {
     d->tnode = tnode;
     tnode->dnode = d;
     d->smap_id = ++this->last_smap_id;
+    this->size++;
 
     // set up pavl nodes
     d->pnode = pavl_probe_node(this->tbl, d);
@@ -178,6 +179,7 @@ namespace DFI {
     this->imaginary_smap_id = -1;
     this->latest_mod = -1;
     this->last_smap_id = -1;
+    this->size = 0;
     int current_index = -1;
     std::unordered_map<DNode*, int> reverse_smap;
     generate_index_helper(this, root, &current_index, &reverse_smap);

@@ -101,12 +101,14 @@ void tnode_to_dot(TNode *root, std::string path, std::string type_names[], int n
 
 void test_generate_random_tree() {
   std::cout << std::endl;
+  std::cout << std::endl;
   std::cout << "testing random tree generation..." << std::endl;
+  std::cout << std::endl;
   int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 5};
   int num_nodes = 1;
   for(int i = 0; i < 7; i++) {
     TNode *root = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), 50);
-    std::cout << num_nodes << " nodes... " << std::flush;
+    std::cout << "  " << num_nodes << " nodes... " << std::flush;
     std::queue<TNode*> q;
     assert(root->parent == NULL);
     q.push(root);
@@ -133,16 +135,69 @@ void test_generate_random_tree() {
   }
 }
 
+TNode *generate_realistic_tree(int size, int num_types) {
+  // "realistic" branching factor probability distribution
+  int branch_dist[] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 5, 6, 7, 8};
+  return generate_random_tree(size, branch_dist, ASIZE(branch_dist), num_types);
+}
+
+void test_index_generation() {
+  std::cout << std::endl;
+  std::cout << std::endl;
+  std::cout << "testing index generation..." << std::endl;
+  std::cout << std::endl;
+  std::vector<int> sizes = {1, 2, 3, 10, 20, 40, 80, 200, 400, 800, 1000, 2000, 20000, 100000, 1000000};
+  for(int size : sizes) {
+    TNode *root = generate_realistic_tree(size, 1000);
+    std::cout << "  " << size << " nodes... " << std::flush;
+    DFilter filter = DFilter(root);
+
+    // peform fresh index checks
+    assert(filter.size == size);
+    assert(filter.size == filter.imaginary_smap_id);
+    assert(filter.successor_map.size() - 1 == filter.size);
+    int type_sum = 0;
+    for(auto kv : filter.type_tables) {
+      struct pavl_table *type_table = kv.second;
+      assert(type_table != NULL);
+      type_sum += type_table->pavl_count;
+    }
+    assert(type_sum == filter.size);
+    std::queue<TNode*> q;
+    q.push(root);
+    while(!q.empty()) {
+      TNode *node = q.front();
+      q.pop();
+      assert(node->dnode != NULL);
+      DNode *dnode = node->dnode;
+      assert(dnode->base_index >= 0 && dnode->base_index < size);
+      assert(dnode->slink != NULL);
+      SLink *slink = dnode->slink;
+      assert(slink->smap_id > dnode->base_index && slink->smap_id <= size);
+      for(TNode *child : node->children) {
+        assert(child->parent == node);
+        q.push(child);
+      }
+    }
+    TNode::delete_tree(root);
+    std::cout << "[OK]" << std::endl;
+  }
+}
+
 int main() {
   std::cout << "test suite started" << std::endl;
-  std::cout << "generating random tree" << std::endl;
-  std::string type_names[] = {"A", "B", "C", "D", "E", "F", "G"};
-  int branch_dist[] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
-  TNode *rootA = generate_random_tree(200, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
-  tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
-  std::cout << "generating index..." << std::endl;
-  DFilter filter = DFilter(rootA);
-
-  TNode::delete_tree(rootA);
+  //std::cout << "generating random tree" << std::endl;
+  //std::string type_names[] = {"A", "B", "C", "D", "E", "F", "G"};
+  //int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
+  //TNode *rootA = generate_random_tree(200, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
+  //tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
+  //std::cout << "generating index..." << std::endl;
+  //DFilter filter = DFilter(rootA);
+  //TNode::delete_tree(rootA);
   test_generate_random_tree();
+  test_index_generation();
+  std::cout << std::endl;
+  std::cout << std::endl;
+  std::cout << "test suite finished." << std::endl;
+  std::cout << std::endl;
 }

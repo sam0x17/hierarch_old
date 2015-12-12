@@ -63,13 +63,14 @@ namespace DFI {
   class DFilter {
   public:
     TNode *troot;
-    unsigned int latest_mod;
+    int latest_mod;
+    int imaginary_smap_id;
+    int last_smap_id;
+    unsigned int size;
     struct pavl_table *tbl;
     std::unordered_map<int, struct pavl_table*> type_tables;
     std::unordered_map<int, int> latest_type_mods;
     std::unordered_map<int, DNode*> successor_map;
-    int imaginary_smap_id;
-    int last_smap_id;
     //TODO: destructor (can call delete_tree) but must delete type_tables, etc
 
     DFilter();
