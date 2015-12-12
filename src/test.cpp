@@ -148,7 +148,7 @@ void test_index_generation() {
   std::cout << std::endl;
   std::vector<int> sizes = {1, 2, 3, 10, 20, 40, 80, 200, 400, 800, 1000, 2000, 20000, 100000, 1000000};
   for(int size : sizes) {
-    TNode *root = generate_realistic_tree(size, 50);
+    TNode *root = generate_realistic_tree(size, 35);
     std::cout << "  " << size << " nodes... " << std::flush;
     DFilter filter = DFilter(root);
 
@@ -172,6 +172,9 @@ void test_index_generation() {
       DNode *dnode = node->dnode;
       assert(dnode->base_index >= 0 && dnode->base_index < size);
       assert(dnode->type_base_index >= 0 && dnode->type_base_index < size);
+      assert(dnode->dfi() == dnode->base_index);
+      assert(dnode->type_dfi() == dnode->type_base_index);
+      assert(dnode->type_dfi() <= dnode->dfi());
       assert(dnode->slink != NULL);
       SLink *slink = dnode->slink;
       assert(slink->smap_id > dnode->base_index && slink->smap_id <= size);

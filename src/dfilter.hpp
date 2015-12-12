@@ -23,6 +23,7 @@ namespace DFI {
   class DNode {
   public:
     unsigned int mod_num;
+    unsigned int type_mod;
     unsigned int base_index;
     unsigned int type_base_index;
     int rhs_offset;
@@ -71,6 +72,8 @@ namespace DFI {
     unsigned int size;
     struct pavl_table *tbl;
     std::unordered_map<int, struct pavl_table*> type_tables;
+    std::unordered_map<int, int> latest_type_mods;
+    std::unordered_map<int, int> type_imaginary_smap_ids;
     std::unordered_map<int, DNode*> successor_map;
     //TODO: destructor (can call delete_tree) but must delete type_tables, etc
 
@@ -82,6 +85,8 @@ namespace DFI {
     void assign_dnode(TNode *tnode, unsigned int base_index, unsigned int type_base_index, int rhs_offset, int type_rhs_offset);
     struct pavl_table *acquire_type_table(int type);
     int num_nodes_of_type(int type);
+    int latest_type_mod(int type);
+    int increment_type_mod(int type);
     DNode *avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child);
   };
 

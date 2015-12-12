@@ -93,7 +93,6 @@ namespace DFI {
   // O(log(n)) if mod_num is out of date
   // O(1) if mod_num is up to date
   // updates mod_num if not already up to date
-  // also updates type dfi
   unsigned int DNode::dfi() {
     if(this->mod_num < this->dfilter->latest_mod) {
       // must update base_index
@@ -122,6 +121,38 @@ namespace DFI {
     return this->base_index;
   }
 
+  // O(log(n)) if type_mod is out of date
+  // O(1) if type_mod is up to date
+  // updates type_mod if not already up to date
+  unsigned int DNode::type_dfi() {
+    assert(tnode != NULL);
+    int type = tnode->type;
+    if(type_mod < dfilter->latest_type_mod(type)) {
+      // must update type_base_index
+      assert(type_pnode != NULL);
+      DNode *type_avl_parent = this->type_avl_parent();
+      assert(type_avl_parent != NULL);
+      if(type_pnode_is_rhs()) {
+        // this is a RHS node (in AVL tree)
+        type_avl_parent->type_dfi(); // update parent dfi
+        type_base_index += type_avl_parent->type_rhs_offset;
+        if(type_avl_parent->type_pnode_has_children()) // always true though?
+          type_rhs_offset += type_avl_parent->type_rhs_offset;
+        type_avl_parent->type_rhs_offset = 0;
+      } else {
+        // this is a LHS node (in AVL tree)
+        int orig_parent_index = type_avl_parent->type_base_index;
+        int diff = type_avl_parent->type_dfi() - orig_parent_index;
+        type_base_index += diff;
+        if(type_pnode_has_children())
+          type_rhs_offset += diff;
+      }
+      type_mod = type_avl_parent->type_mod;
+    }
+    assert(type_mod == dfilter->latest_type_mod(type));
+    return type_base_index;
+  }
+
   DFilter::DFilter() {
     this->imaginary_smap_id = -1;
     this->tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
@@ -140,6 +171,7 @@ namespace DFI {
   void DFilter::assign_dnode(TNode *tnode, unsigned int base_index, unsigned int type_base_index, int rhs_offset, int type_rhs_offset) {
     DNode *d = tnode->dnode = new DNode();
     d->mod_num = this->latest_mod;
+    d->type_mod = this->latest_type_mod(tnode->type);
     d->dfilter = this;
     d->base_index = base_index;
     d->type_base_index = type_base_index;
@@ -171,7 +203,7 @@ namespace DFI {
 
   struct pavl_table *DFilter::acquire_type_table(int type) {
     auto got = this->type_tables.find(type);
-    if(got == type_tables.end())
+    if(got == this->type_tables.end())
       return this->type_tables[type] = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     else
       return this->type_tables[type];
@@ -181,6 +213,22 @@ namespace DFI {
     assert(this->tbl != NULL);
     assert(this->tbl->pavl_root != NULL);
     return (DNode *)this->tbl->pavl_root->pavl_data;
+  }
+
+  int DFilter::latest_type_mod(int type) {
+    if(this->latest_type_mods.find(type) == this->latest_type_mods.end()) {
+      return this->latest_type_mods[type];
+    } else {
+      return this->latest_type_mods[type] = 0;
+    }
+  }
+
+  int DFilter::increment_type_mod(int type) {
+    if(this->latest_type_mods.find(type) == this->latest_type_mods.end()) {
+      return ++(this->latest_type_mods[type]);
+    } else {
+      return this->latest_type_mods[type] = 0;
+    }
   }
 
   int DFilter::num_nodes_of_type(int type) {
