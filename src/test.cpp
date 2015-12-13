@@ -175,6 +175,8 @@ void test_index_generation() {
       assert(dnode->dfi() == dnode->base_index);
       assert(dnode->type_dfi() == dnode->type_base_index);
       assert(dnode->type_dfi() <= dnode->dfi());
+      assert(dnode->postorder_dfi() <= filter.size);
+      assert(dnode->postorder_dfi() >= 0);
       assert(dnode->slink != NULL);
       SLink *slink = dnode->slink;
       assert(slink->smap_id > dnode->base_index && slink->smap_id <= size);
@@ -188,18 +190,80 @@ void test_index_generation() {
   }
 }
 
+void test_result_iteration() {
+  std::cout << std::endl;
+  std::cout << std::endl;
+  std::cout << "testing result iteration..." << std::endl;
+  std::cout << std::endl;
+  std::vector<int> sizes = {1, 40, 80, 200, 400, 800, 1000, 2000, 20000, 100000};
+  for(int size : sizes) {
+    TNode *root = generate_realistic_tree(size, 5);
+    std::cout << "  " << size << " nodes... " << std::flush;
+    DFilter filter = DFilter(root);
+    for(int i = 0; i < 100; i++) {
+      int type = root->type;
+      if(size > 1)
+        type = rand_int(0, 4);
+      DNode *first = NULL;
+      DNode *last = NULL;
+      if(filter.num_nodes_of_type(type) == 0)
+        continue;
+      int first_index = rand_int(0, filter.num_nodes_of_type(type) - 1);
+      int last_index = rand_int(first_index, filter.num_nodes_of_type(type) - 1);
+      std::queue<DNode*> q;
+      assert(filter.type_avl_root(type) != NULL);
+      q.push(filter.type_avl_root(type));
+      while(!q.empty() && (first == NULL || last == NULL)) {
+        DNode *node = q.front();
+        q.pop();
+        if(node->type_dfi() == first_index)
+          first = node;
+        if(node->type_dfi() == last_index)
+          last = node;
+        if(node->type_avl_rhs() != NULL)
+          q.push(node->type_avl_rhs());
+        if(node->type_avl_lhs() != NULL)
+          q.push(node->type_avl_lhs());
+      }
+      DResult res = DResult(first, last, type);
+      // test iterating over result
+      assert(res.size() == last->type_dfi() - first->type_dfi() + 1);
+      int observed_size = 0;
+      while(res.has_next()) {
+        TNode *node = res.next();
+        assert(node != NULL);
+        assert(node->dnode != NULL);
+        assert(node->type == type);
+        assert(node->dnode->dfi() >= first->dfi());
+        assert(node->dnode->dfi() <= last->dfi());
+        observed_size++;
+      }
+      assert(observed_size == res.size());
+      DResult empty_res = DResult(NULL, NULL, type);
+      assert(empty_res.size() == 0);
+      assert(empty_res.has_next() == false);
+      assert(empty_res.next() == NULL);
+      assert(empty_res.has_next() == false);
+      assert(empty_res.next() == NULL);
+    }
+    TNode::delete_tree(root);
+    std::cout << "[OK]" << std::endl;
+  }
+}
+
 int main() {
   std::cout << "test suite started" << std::endl;
   //std::cout << "generating random tree" << std::endl;
-  //std::string type_names[] = {"A", "B", "C", "D", "E", "F", "G"};
-  //int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
-  //TNode *rootA = generate_random_tree(200, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
-  //tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
+  std::string type_names[] = {"A", "B", "C", "D", "E", "F", "G"};
+  int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
+  TNode *rootA = generate_random_tree(200, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
+  tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
   //std::cout << "generating index..." << std::endl;
   //DFilter filter = DFilter(rootA);
   //TNode::delete_tree(rootA);
   test_generate_random_tree();
   test_index_generation();
+  test_result_iteration();
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "test suite finished." << std::endl;

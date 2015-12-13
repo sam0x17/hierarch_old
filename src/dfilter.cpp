@@ -52,6 +52,13 @@ namespace DFI {
     return this->dfilter->successor_map[this->slink->smap_id];
   }
 
+  int DNode::postorder_dfi() {
+    DNode *successor = postorder_successor();
+    if(successor == NULL)
+      return dfilter->size;
+    return successor->dfi();
+  }
+
   DNode *DNode::avl_parent() {
     assert(this->pnode != NULL);
     if(this->pnode->pavl_parent == NULL)
@@ -66,6 +73,22 @@ namespace DFI {
       return NULL;
     assert(this->type_pnode->pavl_parent->pavl_data != NULL);
     return pavl_dnode(this->type_pnode->pavl_parent);
+  }
+
+  DNode *DNode::type_avl_rhs() {
+    assert(type_pnode != NULL);
+    if(type_pnode->pavl_link[1] == NULL)
+      return NULL;
+    assert(type_pnode->pavl_link[1]->pavl_data != NULL);
+    return pavl_dnode(type_pnode->pavl_link[1]);
+  }
+
+  DNode *DNode::type_avl_lhs() {
+    assert(type_pnode != NULL);
+    if(type_pnode->pavl_link[0] == NULL)
+      return NULL;
+    assert(type_pnode->pavl_link[0]->pavl_data != NULL);
+    return pavl_dnode(type_pnode->pavl_link[0]);
   }
 
   bool DNode::pnode_is_rhs() {
@@ -90,10 +113,25 @@ namespace DFI {
     return this->type_pnode->pavl_link[0] != NULL || this->type_pnode->pavl_link[1] != NULL;
   }
 
+  // O(log(n))
+  int DNode::type_avl_hcol() {
+    int col = 0;
+    struct pavl_node *cur = type_pnode;
+    while(cur->pavl_parent != NULL) {
+      if(cur == cur->pavl_parent->pavl_link[0])
+        col--;
+      else
+        col++;
+      cur = cur->pavl_parent;
+    }
+    return col;
+  }
+
   // O(log(n)) if mod_num is out of date
   // O(1) if mod_num is up to date
   // updates mod_num if not already up to date
   unsigned int DNode::dfi() {
+    assert(this != NULL);
     if(this->mod_num < this->dfilter->latest_mod) {
       // must update base_index
       assert(this != this->dfilter->avl_root());
@@ -125,6 +163,7 @@ namespace DFI {
   // O(1) if type_mod is up to date
   // updates type_mod if not already up to date
   unsigned int DNode::type_dfi() {
+    assert(this != NULL);
     assert(tnode != NULL);
     int type = tnode->type;
     if(type_mod < dfilter->latest_type_mod(type)) {
@@ -215,6 +254,10 @@ namespace DFI {
     return (DNode *)this->tbl->pavl_root->pavl_data;
   }
 
+  DNode *DFilter::type_avl_root(int type) {
+    return pavl_dnode(acquire_type_table(type)->pavl_root);
+  }
+
   int DFilter::latest_type_mod(int type) {
     if(this->latest_type_mods.find(type) == this->latest_type_mods.end()) {
       return this->latest_type_mods[type];
@@ -282,6 +325,79 @@ namespace DFI {
     }
     slink_map.clear();
     reverse_smap.clear();
+  }
+
+  DResult::DResult(DNode *first, DNode *last, int type) {
+    if(first != NULL) {
+      assert(first->dfilter != NULL);
+      assert(first->dfilter == last->dfilter);
+      assert(type == -1 || first->dfilter->type_tables.find(type) != first->dfilter->type_tables.end());
+      assert(first->tnode->type == type);
+      assert(last->tnode->type == type);
+      // force update first and last nodes
+      first->dfi();
+      first->type_dfi();
+      last->dfi();
+      last->type_dfi();
+      assert(first->dfi() <= last->dfi());
+      // init
+      this->first = first;
+      this->last = last;
+      this->type = type;
+      dfilter = first->dfilter;
+      mod_num = dfilter->latest_mod;
+      type_mod = dfilter->latest_type_mod(type);
+      node = first;
+    } else {
+      this->first = NULL;
+      this->last = NULL;
+      this->node = NULL;
+    }
+  }
+
+  bool DResult::has_next() {
+    return node != NULL && node->dfi() <= last->dfi();
+  }
+
+  // incrementing to the next element is O(1)
+  TNode *DResult::next() {
+    if(first == NULL)
+      return NULL; // empty result
+    assert(mod_num == dfilter->latest_mod);
+    assert(type_mod == dfilter->latest_type_mod(type));
+    if(last == first) {
+      node = NULL;
+      return first->tnode;
+    }
+    // return current iteration item
+    DNode *res = node;
+    if(node->type_avl_rhs() != NULL) {
+      node = node->type_avl_rhs();
+      while(node->type_avl_lhs() != NULL)
+        node = node->type_avl_lhs();
+      return res->tnode;
+    }
+    while(true) {
+      if(node->type_avl_parent() == NULL) {
+        node = NULL;
+        return res->tnode;
+      }
+      if(node->type_avl_parent()->type_avl_lhs() == node) {
+        node = node->type_avl_parent();
+        return res->tnode;
+      }
+      node = node->type_avl_parent();
+    }
+  }
+
+  unsigned int DResult::size() {
+    if(first == NULL)
+      return 0; // empty result
+    assert(mod_num == dfilter->latest_mod);
+    assert(type_mod == dfilter->latest_type_mod(type));
+    if(first == last)
+      return 1;
+    return last->type_dfi() - first->type_dfi() + 1;
   }
 
 }

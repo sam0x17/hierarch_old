@@ -6,6 +6,7 @@
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
+#include <stack>
 #include "assert.h"
 extern "C" {
   #include "pavl.h"
@@ -19,6 +20,7 @@ namespace DFI {
   class DFilter;
   class DNode;
   class SLink;
+  class DResult;
 
   class DNode {
   public:
@@ -39,7 +41,11 @@ namespace DFI {
     unsigned int type_dfi();
     DNode *avl_parent();
     DNode *type_avl_parent();
+    DNode *type_avl_rhs();
+    DNode *type_avl_lhs();
+    int type_avl_hcol();
     DNode *postorder_successor();
+    int postorder_dfi();
     bool pnode_is_rhs();
     bool type_pnode_is_rhs();
     bool pnode_has_children();
@@ -80,7 +86,7 @@ namespace DFI {
     DFilter();
     DFilter(TNode *root);
     DNode *avl_root();
-    DNode *type_avl_root();
+    DNode *type_avl_root(int type);
     void generate_index(TNode *root);
     void assign_dnode(TNode *tnode, unsigned int base_index, unsigned int type_base_index, int rhs_offset, int type_rhs_offset);
     struct pavl_table *acquire_type_table(int type);
@@ -90,8 +96,24 @@ namespace DFI {
     DNode *avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child);
   };
 
-  DNode *pavl_dnode(struct pavl_node *node);
+  class DResult {
+  private:
+    int type;
+    unsigned int mod_num;
+    unsigned int type_mod;
+    bool first_run = true;
+    DFilter *dfilter;
+    DNode *first;
+    DNode *last;
+    DNode *node;
+  public:
+    DResult(DNode *first, DNode *last, int type); // TODO: make into iterator
+    TNode *next();
+    bool has_next();
+    unsigned int size();
+  };
 
+  DNode *pavl_dnode(struct pavl_node *node);
 }
 
 #endif
