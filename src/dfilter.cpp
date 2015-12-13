@@ -3,7 +3,7 @@ namespace DFI {
 
   void TNode::add_child(TNode *child) {
     child->parent = this;
-    this->children.push_back(child);
+    children.push_back(child);
   }
 
   void TNode::delete_tree(TNode *&root) {
@@ -47,9 +47,9 @@ namespace DFI {
   }
 
   DNode *DNode::postorder_successor() {
-    assert(this->slink != NULL);
-    assert(this->dfilter != NULL);
-    return this->dfilter->successor_map[this->slink->smap_id];
+    assert(slink != NULL);
+    assert(dfilter != NULL);
+    return dfilter->successor_map[slink->smap_id];
   }
 
   int DNode::postorder_dfi() {
@@ -60,19 +60,19 @@ namespace DFI {
   }
 
   DNode *DNode::avl_parent() {
-    assert(this->pnode != NULL);
-    if(this->pnode->pavl_parent == NULL)
+    assert(pnode != NULL);
+    if(pnode->pavl_parent == NULL)
       return NULL;
-    assert(this->pnode->pavl_parent->pavl_data != NULL);
-    return pavl_dnode(this->pnode->pavl_parent);
+    assert(pnode->pavl_parent->pavl_data != NULL);
+    return pavl_dnode(pnode->pavl_parent);
   }
 
   DNode *DNode::type_avl_parent() {
-    assert(this->type_pnode != NULL);
-    if(this->type_pnode->pavl_parent == NULL)
+    assert(type_pnode != NULL);
+    if(type_pnode->pavl_parent == NULL)
       return NULL;
-    assert(this->type_pnode->pavl_parent->pavl_data != NULL);
-    return pavl_dnode(this->type_pnode->pavl_parent);
+    assert(type_pnode->pavl_parent->pavl_data != NULL);
+    return pavl_dnode(type_pnode->pavl_parent);
   }
 
   DNode *DNode::type_avl_rhs() {
@@ -92,25 +92,25 @@ namespace DFI {
   }
 
   bool DNode::pnode_is_rhs() {
-    assert(this->pnode != NULL);
-    assert(this->pnode->pavl_parent != NULL);
-    return this->pnode->pavl_parent->pavl_link[1] == this->pnode;
+    assert(pnode != NULL);
+    assert(pnode->pavl_parent != NULL);
+    return pnode->pavl_parent->pavl_link[1] == pnode;
   }
 
   bool DNode::type_pnode_is_rhs() {
-    assert(this->type_pnode != NULL);
-    assert(this->type_pnode->pavl_parent != NULL);
-    return this->type_pnode->pavl_parent->pavl_link[1];
+    assert(type_pnode != NULL);
+    assert(type_pnode->pavl_parent != NULL);
+    return type_pnode->pavl_parent->pavl_link[1];
   }
 
   bool DNode::pnode_has_children() {
-    assert(this->pnode != NULL);
-    return this->pnode->pavl_link[0] != NULL || this->pnode->pavl_link[1] != NULL;
+    assert(pnode != NULL);
+    return pnode->pavl_link[0] != NULL || pnode->pavl_link[1] != NULL;
   }
 
   bool DNode::type_pnode_has_children() {
-    assert(this->type_pnode != NULL);
-    return this->type_pnode->pavl_link[0] != NULL || this->type_pnode->pavl_link[1] != NULL;
+    assert(type_pnode != NULL);
+    return type_pnode->pavl_link[0] != NULL || type_pnode->pavl_link[1] != NULL;
   }
 
   // O(log(n))
@@ -132,31 +132,31 @@ namespace DFI {
   // updates mod_num if not already up to date
   unsigned int DNode::dfi() {
     assert(this != NULL);
-    if(this->mod_num < this->dfilter->latest_mod) {
+    if(mod_num < dfilter->latest_mod) {
       // must update base_index
-      assert(this != this->dfilter->avl_root());
-      assert(this->pnode != NULL);
-      assert(this->pnode->pavl_parent != NULL);
+      assert(this != dfilter->avl_root());
+      assert(pnode != NULL);
+      assert(pnode->pavl_parent != NULL);
       DNode *avl_parent = this->avl_parent();
-      if(this->pnode_is_rhs()) {
+      if(pnode_is_rhs()) {
         // this is a RHS node (in AVL tree)
         avl_parent->dfi(); // update parent dfi
-        this->base_index += avl_parent->rhs_offset;
+        base_index += avl_parent->rhs_offset;
         if(avl_parent->pnode_has_children())
-          this->rhs_offset += avl_parent->rhs_offset;
+          rhs_offset += avl_parent->rhs_offset;
         avl_parent->rhs_offset = 0;
       } else {
         // this is a LHS node (in AVL tree)
         int orig_parent_index = avl_parent->base_index;
         int diff = avl_parent->dfi() - orig_parent_index;
-        this->base_index += diff;
-        if(this->pnode_has_children())
-          this->rhs_offset += diff;
+        base_index += diff;
+        if(pnode_has_children())
+          rhs_offset += diff;
       }
-      this->mod_num = avl_parent->mod_num;
+      mod_num = avl_parent->mod_num;
     }
-    assert(this->mod_num == this->dfilter->latest_mod);
-    return this->base_index;
+    assert(mod_num == dfilter->latest_mod);
+    return base_index;
   }
 
   // O(log(n)) if type_mod is out of date
@@ -193,24 +193,24 @@ namespace DFI {
   }
 
   DFilter::DFilter() {
-    this->imaginary_smap_id = -1;
-    this->tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
-    this->troot = NULL;
-    this->size = 0;
+    imaginary_smap_id = -1;
+    tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
+    troot = NULL;
+    size = 0;
   }
 
   DFilter::DFilter(TNode *root) {
-    this->imaginary_smap_id = -1;
-    this->tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
-    this->troot = root;
-    this->size = 0;
-    this->generate_index(root);
+    imaginary_smap_id = -1;
+    tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
+    troot = root;
+    size = 0;
+    generate_index(root);
   }
 
   void DFilter::assign_dnode(TNode *tnode, unsigned int base_index, unsigned int type_base_index, int rhs_offset, int type_rhs_offset) {
     DNode *d = tnode->dnode = new DNode();
-    d->mod_num = this->latest_mod;
-    d->type_mod = this->latest_type_mod(tnode->type);
+    d->mod_num = latest_mod;
+    d->type_mod = latest_type_mod(tnode->type);
     d->dfilter = this;
     d->base_index = base_index;
     d->type_base_index = type_base_index;
@@ -218,20 +218,20 @@ namespace DFI {
     d->type_rhs_offset = type_rhs_offset;
     d->tnode = tnode;
     tnode->dnode = d;
-    d->smap_id = ++this->last_smap_id;
-    this->size++;
+    d->smap_id = ++last_smap_id;
+    size++;
 
     // set up pavl nodes
-    d->pnode = pavl_probe_node(this->tbl, d);
-    d->type_pnode = pavl_probe_node(this->acquire_type_table(tnode->type), d);
+    d->pnode = pavl_probe_node(tbl, d);
+    d->type_pnode = pavl_probe_node(acquire_type_table(tnode->type), d);
 
     // set up incoming s-link
-    this->successor_map[d->smap_id] = d;
+    successor_map[d->smap_id] = d;
   }
 
   DNode *DFilter::avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child) {
     DNode *d = tnode->dnode = new DNode();
-    d->mod_num = ++this->latest_mod;
+    d->mod_num = ++latest_mod;
     d->dfilter = this;
     d->base_index = pavl_dnode(parent)->base_index;
     d->rhs_offset = 1; //TODO: still need to propogate offset up unless it has been propogated already
@@ -241,17 +241,17 @@ namespace DFI {
   }
 
   struct pavl_table *DFilter::acquire_type_table(int type) {
-    auto got = this->type_tables.find(type);
-    if(got == this->type_tables.end())
-      return this->type_tables[type] = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
+    auto got = type_tables.find(type);
+    if(got == type_tables.end())
+      return type_tables[type] = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     else
-      return this->type_tables[type];
+      return type_tables[type];
   }
 
   DNode *DFilter::avl_root() {
-    assert(this->tbl != NULL);
-    assert(this->tbl->pavl_root != NULL);
-    return (DNode *)this->tbl->pavl_root->pavl_data;
+    assert(tbl != NULL);
+    assert(tbl->pavl_root != NULL);
+    return (DNode *)tbl->pavl_root->pavl_data;
   }
 
   DNode *DFilter::type_avl_root(int type) {
@@ -259,23 +259,23 @@ namespace DFI {
   }
 
   int DFilter::latest_type_mod(int type) {
-    if(this->latest_type_mods.find(type) == this->latest_type_mods.end()) {
-      return this->latest_type_mods[type];
+    if(latest_type_mods.find(type) == latest_type_mods.end()) {
+      return latest_type_mods[type];
     } else {
-      return this->latest_type_mods[type] = 0;
+      return latest_type_mods[type] = 0;
     }
   }
 
   int DFilter::increment_type_mod(int type) {
-    if(this->latest_type_mods.find(type) == this->latest_type_mods.end()) {
-      return ++(this->latest_type_mods[type]);
+    if(latest_type_mods.find(type) == latest_type_mods.end()) {
+      return ++latest_type_mods[type];
     } else {
-      return this->latest_type_mods[type] = 0;
+      return latest_type_mods[type] = 0;
     }
   }
 
   int DFilter::num_nodes_of_type(int type) {
-    return (int)(this->acquire_type_table(type)->pavl_count);
+    return (int)(acquire_type_table(type)->pavl_count);
   }
 
   int generate_index_helper(DFilter *dfilter, TNode *node, int *current_index, std::unordered_map<DNode*, int> *reverse_smap) {
@@ -294,10 +294,10 @@ namespace DFI {
     return base_index;
   }
   void DFilter::generate_index(TNode *root) {
-    this->imaginary_smap_id = -1;
-    this->latest_mod = -1;
-    this->last_smap_id = -1;
-    this->size = 0;
+    imaginary_smap_id = -1;
+    latest_mod = -1;
+    last_smap_id = -1;
+    size = 0;
     int current_index = -1;
     std::unordered_map<DNode*, int> reverse_smap;
     generate_index_helper(this, root, &current_index, &reverse_smap);
@@ -318,9 +318,9 @@ namespace DFI {
         slink->incoming_links++;
       }
       node->slink = slink;
-      if(this->successor_map[smap_id] == NULL) {
-        assert(this->imaginary_smap_id == -1 || this->imaginary_smap_id == smap_id);
-        this->imaginary_smap_id = smap_id;
+      if(successor_map[smap_id] == NULL) {
+        assert(imaginary_smap_id == -1 || imaginary_smap_id == smap_id);
+        imaginary_smap_id = smap_id;
       }
     }
     slink_map.clear();
