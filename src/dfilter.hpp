@@ -74,12 +74,12 @@ namespace DFI {
     TNode *troot;
     int latest_mod;
     int imaginary_smap_id;
+    SLink *imaginary_slink;
     int last_smap_id;
     unsigned int size;
     struct pavl_table *tbl;
     std::unordered_map<int, struct pavl_table*> type_tables;
     std::unordered_map<int, int> latest_type_mods;
-    std::unordered_map<int, int> type_imaginary_smap_ids;
     std::unordered_map<int, DNode*> successor_map;
     //TODO: destructor (can call delete_tree) but must delete type_tables, etc
 
@@ -93,6 +93,38 @@ namespace DFI {
     int num_nodes_of_type(int type);
     int latest_type_mod(int type);
     int increment_type_mod(int type);
+    TNode *get_node(int dfi);
+    TNode *get_closest_node(int dfi, int type);
+
+    // insert a new tree node at the specified location and update
+    // index accordingly
+    // complexity: O(log(n))
+    // params:
+    //   parent: the TNode that should be the parent of this new node
+    //           if parent is NULL, TNode will be inserted as root
+    //   position: the position of the new node in the parent's collection
+    //             of child nodes. If a node already exists at that position,
+    //             that node will be pushed to the right
+    //   type: the type code for the new node
+    void insert(TNode *parent, int position, int type);
+
+    // remove the specified tree node (along with any descendants that node
+    // may have), and update the index accordingly
+    // complexity: O(log(n)*m) where m is the number of nodes removed
+    // params:
+    //   node: pointer to the node to remove
+    void remove(TNode *node);
+
+    // changes the type of the specified tree node to the specified type and
+    // updates the index accordingly
+    // complexity: O(log(n_t)) where n_t is the number of nodes of type t in
+    //             the tree and t is the the type from (new type, old type) that
+    //             has more instantiations in the tree
+    // parems:
+    //   node: pointer to the node to be replaced
+    //   type: the type to change this node to
+    void replace(TNode *node, int type);
+
     DNode *avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child);
   };
 

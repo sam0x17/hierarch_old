@@ -28,6 +28,12 @@ int rand_int(int a, int b) {
   uniform_dist(el);
 }
 
+TNode *rand_child(TNode *node) {
+  if(node->children.size() == 0)
+    return node;
+  return node->children[rand_int(0, node->children.size() - 1)];
+}
+
 bool maybe() {
   return (bool)rand_int(0, 1);
 }
@@ -106,7 +112,7 @@ void test_generate_random_tree() {
   std::cout << std::endl;
   int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 5};
   int num_nodes = 1;
-  for(int i = 0; i < 7; i++) {
+  for(int i = 0; i < 6; i++) {
     TNode *root = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), 50);
     std::cout << "  " << num_nodes << " nodes... " << std::flush;
     std::queue<TNode*> q;
@@ -146,9 +152,9 @@ void test_index_generation() {
   std::cout << std::endl;
   std::cout << "testing index generation..." << std::endl;
   std::cout << std::endl;
-  std::vector<int> sizes = {1, 2, 3, 10, 20, 40, 80, 200, 400, 800, 1000, 2000, 20000, 100000, 1000000};
+  std::vector<int> sizes = {1, 2, 3, 10, 20, 40, 80, 200, 400, 800, 1000, 2000, 20000, 100000};
   for(int size : sizes) {
-    TNode *root = generate_realistic_tree(size, 35);
+    TNode *root = generate_realistic_tree(size, 20);
     std::cout << "  " << size << " nodes... " << std::flush;
     DFilter filter = DFilter(root);
 
@@ -184,6 +190,13 @@ void test_index_generation() {
         assert(child->parent == node);
         q.push(child);
       }
+    }
+    // test get_node
+    for(int dfi = 0; dfi < size; dfi++) {
+      TNode *node = filter.get_node(dfi);
+      assert(node != NULL);
+      assert(node->dnode->dfilter == &filter);
+      assert(node->dnode->dfi() == dfi);
     }
     TNode::delete_tree(root);
     std::cout << "[OK]" << std::endl;
@@ -254,13 +267,22 @@ void test_result_iteration() {
 int main() {
   std::cout << "test suite started" << std::endl;
   //std::cout << "generating random tree" << std::endl;
-  std::string type_names[] = {"A", "B", "C", "D", "E", "F", "G"};
+  std::string type_names[] = {"A", "B", "C", "D", "E"};
   int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
-  TNode *rootA = generate_random_tree(200, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
-  tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
-  //std::cout << "generating index..." << std::endl;
-  //DFilter filter = DFilter(rootA);
-  //TNode::delete_tree(rootA);
+  //tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
+  for(int i = 0; i < 2000; i++) {
+    TNode *rootA = generate_random_tree(2000, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
+    std::cout << "generating index..." << std::endl;
+    DFilter filter = DFilter(rootA);
+    std::cout << "generated index -- trying insert" << std::endl;
+    TNode *node = filter.get_node(i);
+    std::cout << "selected parent node dfi: " << node->dnode->dfi() << std::endl;
+    int insertion_index = rand_int(0, node->children.size());
+    std::cout << "insertion_index: " << insertion_index << std::endl;
+    std::cout << "node children size: " << node->children.size() << std::endl;
+    filter.insert(node, insertion_index, 1);
+    TNode::delete_tree(rootA);
+  }
   test_generate_random_tree();
   test_index_generation();
   test_result_iteration();

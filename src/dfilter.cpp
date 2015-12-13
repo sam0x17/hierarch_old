@@ -1,6 +1,118 @@
 #include "dfilter.hpp"
 namespace DFI {
 
+  // user-facing methods (the whole point of this library):
+
+  void DFilter::insert(TNode *parent, int position, int type) {
+    TNode *node = new TNode();
+    node->type = type;
+    node->parent = parent;
+    int displaced_dfi;
+    TNode *displaced_node = NULL;
+    if(parent == NULL) {
+      // new node will be root
+      displaced_dfi = 0;
+      displaced_node = troot;
+      assert(position == 0);
+      node->add_child(troot);
+      troot = node;
+    } else {
+      assert(position <= parent->children.size());
+      if(parent->children.size() == 0) {
+        // parent is a leaf
+        displaced_dfi = parent->dnode->dfi() + 1;
+        parent->children.push_back(node);
+      } else { // parent has children
+        if(position == 0) {
+          // new node will be parent's 1st child
+          displaced_dfi = parent->dnode->dfi() + 1;
+          assert(displaced_dfi == parent->children[0]->dnode->dfi());
+          displaced_node = parent->children[0];
+        } else if(position == parent->children.size()) {
+          // new node will be parent's last child
+          displaced_dfi = parent->dnode->postorder_dfi();
+          if(displaced_dfi < size)
+            displaced_node = parent->dnode->postorder_successor()->tnode;
+        } else { // new node will be an interior child
+          displaced_dfi = parent->children[position]->dnode->dfi();
+          displaced_node = parent->children[position];
+        }
+        // modify TNode tree accordingly
+        if(position == parent->children.size()) {
+          parent->children.push_back(node);
+        } else {
+          parent->children.reserve(parent->children.size() + 1);
+          parent->children.insert(parent->children.begin() + position, node);
+        }
+      }
+    }
+    if(displaced_node == NULL)
+      displaced_node = get_node(displaced_dfi); // could still be null if last node
+
+    assert(node->parent == parent);
+    assert(parent != NULL || parent->children[position] == node);
+    assert(node->type == type);
+    assert(displaced_dfi >= 0 && displaced_dfi <= size);
+    assert(displaced_dfi >= parent->dnode->dfi());
+    assert((displaced_node == NULL && displaced_dfi == size) ||
+            displaced_node->dnode->dfi() == displaced_dfi);
+
+    // create DNode and update AVL trees
+    DNode *d = node->dnode = new DNode();
+    d->mod_num = ++latest_mod;
+    d->type_mod = increment_type_mod(type);
+    d->dfilter = this;
+    d->base_index = displaced_dfi;
+    d->type_rhs_offset = 0;
+    d->rhs_offset = 0;
+    d->tnode = node;
+    if(displaced_node == NULL) {
+      // node will become the last node in tree
+      // no propogation required
+      d->type_base_index = num_nodes_of_type(type);
+      d->smap_id = ++last_smap_id;
+      successor_map[d->smap_id] = d;
+      d->slink = imaginary_slink
+    }
+    /*
+    d->type_base_index = type_base_index;
+    d->rhs_offset = rhs_offset;
+    d->type_rhs_offset = type_rhs_offset;
+    d->tnode = tnode;
+    tnode->dnode = d;
+    d->smap_id = ++last_smap_id;
+    size++;
+
+    // set up pavl nodes
+    d->pnode = pavl_probe_node(tbl, d);
+    d->type_pnode = pavl_probe_node(acquire_type_table(tnode->type), d);
+
+    // set up incoming s-link
+    successor_map[d->smap_id] = d;*/
+    std::cout << "tnode inserted with displacement dfi: " << displaced_dfi << std::endl;
+  }
+
+  // O(log(n))
+  TNode *DFilter::get_closest_node(int dfi, int type) {
+    DNode stub;
+    stub.base_index = dfi;
+    stub.dfilter = NULL;
+    struct pavl_node *match = pavl_find_node(acquire_type_table(type), &stub);
+    assert(match != NULL);
+    return pavl_dnode(match)->tnode;
+  }
+
+  // O(log(n))
+  TNode *DFilter::get_node(int dfi) {
+    DNode stub;
+    stub.base_index = dfi;
+    stub.dfilter = NULL;
+    struct pavl_node *match = pavl_find_node(tbl, &stub);
+    if(match == NULL)
+      return NULL;
+    return pavl_dnode(match)->tnode;
+  }
+
   void TNode::add_child(TNode *child) {
     child->parent = this;
     children.push_back(child);
@@ -15,8 +127,7 @@ namespace DFI {
       q.pop();
       for(TNode *child : cur->children)
         q.push(child);
-      if(cur->dnode != NULL) {
-        assert(cur->dnode->slink != NULL);
+      if(cur->dnode != NULL && cur->dnode->slink != NULL) {
         slinks.insert(cur->dnode->slink);
         delete cur->dnode;
       }
@@ -41,6 +152,9 @@ namespace DFI {
       return 0;
   }
 
+
+  // internal methods:
+
   DNode *pavl_dnode(struct pavl_node *node) {
     assert(node != NULL);
     return (DNode *)node->pavl_data;
@@ -54,8 +168,10 @@ namespace DFI {
 
   int DNode::postorder_dfi() {
     DNode *successor = postorder_successor();
-    if(successor == NULL)
+    if(successor == NULL) {
+      assert(slink->smap_id == dfilter->imaginary_smap_id);
       return dfilter->size;
+    }
     return successor->dfi();
   }
 
@@ -132,7 +248,10 @@ namespace DFI {
   // updates mod_num if not already up to date
   unsigned int DNode::dfi() {
     assert(this != NULL);
+    if(dfilter == NULL)
+      return base_index; // used for stubbing
     if(mod_num < dfilter->latest_mod) {
+      std::cout << "non trivial" << std::endl;
       // must update base_index
       assert(this != dfilter->avl_root());
       assert(pnode != NULL);
@@ -164,7 +283,8 @@ namespace DFI {
   // updates type_mod if not already up to date
   unsigned int DNode::type_dfi() {
     assert(this != NULL);
-    assert(tnode != NULL);
+    if(dfilter == NULL)
+      return type_base_index;
     int type = tnode->type;
     if(type_mod < dfilter->latest_type_mod(type)) {
       // must update type_base_index
@@ -236,7 +356,7 @@ namespace DFI {
     d->base_index = pavl_dnode(parent)->base_index;
     d->rhs_offset = 1; //TODO: still need to propogate offset up unless it has been propogated already
 
-    //pavl_insert_in_place(struct pavl_table *tree, void *item, struct pavl_node *parent, int dir, struct pavl_node *child);
+    //pavl_insert_in_place(tbl, d, , int dir, struct pavl_node *child);
     return NULL;
   }
 
@@ -321,8 +441,10 @@ namespace DFI {
       if(successor_map[smap_id] == NULL) {
         assert(imaginary_smap_id == -1 || imaginary_smap_id == smap_id);
         imaginary_smap_id = smap_id;
+        imaginary_slink = slink;
       }
     }
+    assert(imaginary_slink != NULL);
     slink_map.clear();
     reverse_smap.clear();
   }
