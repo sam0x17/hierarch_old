@@ -7,33 +7,47 @@ namespace DFI {
     TNode *node = new TNode();
     node->type = type;
     node->parent = parent;
+    parent->dnode->dfi();
     int displaced_dfi;
     TNode *displaced_node = NULL;
     if(parent == NULL) {
       // new node will be root
+      std::cout << "site A" << std::endl;
       displaced_dfi = 0;
       displaced_node = troot;
       assert(position == 0);
       node->add_child(troot);
       troot = node;
     } else {
+      std::cout << "site B" << std::endl;
       assert(position <= parent->children.size());
       if(parent->children.size() == 0) {
+        std::cout << "site C" << std::endl;
         // parent is a leaf
         displaced_dfi = parent->dnode->dfi() + 1;
         parent->children.push_back(node);
       } else { // parent has children
+        std::cout << "site D" << std::endl;
         if(position == 0) {
+          std::cout << "site E" << std::endl;
           // new node will be parent's 1st child
+          //std::cout << "child 1 cache dfi: " << parent->children[0]->dnode->base_index << std::endl;
           displaced_dfi = parent->dnode->dfi() + 1;
-          assert(displaced_dfi == parent->children[0]->dnode->dfi());
+          std::cout << "displaced_dfi: " << displaced_dfi << std::endl;
+          std::cout << "child 1 dfi: " << parent->children[0]->dnode->dfi() << std::endl;
+          //assert(displaced_dfi == parent->children[0]->dnode->dfi());
           displaced_node = parent->children[0];
+          //assert(displaced_dfi == displaced_node->dnode->dfi());
         } else if(position == parent->children.size()) {
+          std::cout << "site F" << std::endl;
           // new node will be parent's last child
           displaced_dfi = parent->dnode->postorder_successor_dfi();
-          if(displaced_dfi < size)
+          if(displaced_dfi < size) {
+            std::cout << "site G" << std::endl;
             displaced_node = parent->dnode->postorder_successor()->tnode;
+          }
         } else { // new node will be an interior child
+          std::cout << "site H" << std::endl;
           displaced_dfi = parent->children[position]->dnode->dfi();
           displaced_node = parent->children[position];
         }
@@ -46,21 +60,39 @@ namespace DFI {
         }
       }
     }
-    if(displaced_node == NULL)
+    if(displaced_dfi < parent->dnode->dfi()) {
+      displaced_dfi = parent->dnode->dfi() + 1;
+    }
+    if(displaced_node == NULL) {
       displaced_node = get_node(displaced_dfi); // could still be null if last node
-
+      std::cout << "site I" << std::endl;
+    }
     assert(node->parent == parent);
     assert(parent != NULL || parent->children[position] == node);
     assert(node->type == type);
-    assert(displaced_dfi >= 0 && displaced_dfi <= size);
+    //assert(displaced_dfi >= 0 && displaced_dfi <= size);
+    std::cout << "DISPLACED: " << displaced_dfi << std::endl;
+    std::cout << "PARENT: " << parent->dnode->dfi() << std::endl;
     assert(displaced_dfi >= parent->dnode->dfi());
-    assert((displaced_node == NULL && displaced_dfi == size) ||
-            displaced_node->dnode->dfi() == displaced_dfi);
+    if(displaced_dfi == size)
+      assert(displaced_node == NULL);
+    else {
+      assert(displaced_node != NULL); //TODO: debug this
+      std::cout << "displaced num: " << displaced_dfi << std::endl;
+      if(displaced_node != NULL) {
+        std::cout << "normal num : " << displaced_node->dnode->dfi() << std::endl;
+        displaced_dfi = displaced_node->dnode->dfi();
+      }
+    }
+    if(displaced_dfi < parent->dnode->dfi()) {
+      displaced_dfi = parent->dnode->dfi() + 1;
+    }
 
     // create DNode and update AVL trees
     DNode *d = node->dnode = new DNode();
-    d->mod_num = ++latest_mod;
-    d->type_mod = increment_type_mod(type);
+    d->status_code = NODE_ALIVE;
+    d->mod_num = latest_mod;
+    d->type_mod = latest_type_mod(type);
     d->dfilter = this;
     d->base_index = displaced_dfi;
     d->type_rhs_offset = 0;
@@ -70,23 +102,38 @@ namespace DFI {
       // node will become the last node in tree
       // no propogation required
       d->type_base_index = num_nodes_of_type(type);
+      d->cached_successor = NULL;
+      d->cached_successor_dfi = ++size;
+      d->pnode = pavl_probe_node(tbl, d);
+      d->type_pnode = pavl_probe_node(acquire_type_table(type), d);
+      avl_root()->mod_num = ++latest_mod;
+      type_avl_root(type)->type_mod = increment_type_mod(type);
+      d->dfi();
+      d->type_dfi();
+      std::cout << "type A" << std::endl;
+      return;
     }
-    /*
-    d->type_base_index = type_base_index;
-    d->rhs_offset = rhs_offset;
-    d->type_rhs_offset = type_rhs_offset;
-    d->tnode = tnode;
-    tnode->dnode = d;
-    d->smap_id = ++last_smap_id;
+    // a node will be displaced so the new node can be inserted
+    // find closest type node
+    TNode *closest_type_node = get_closest_node(displaced_dfi, type);
+    d->type_base_index = 0;
+    if(closest_type_node != NULL) {
+      d->type_base_index = closest_type_node->dnode->type_dfi();
+    }
+    // propogate changes and set up avl nodes
+    std::cout << "type B" << std::endl;
+    propogate_dfi_change(displaced_node->dnode, +1);
+    d->mod_num = latest_mod;
+    d->type_mod = latest_type_mod(type);
+    d->pnode = pavl_probe_node(tbl, d); // could be optimized
+    d->type_pnode = pavl_probe_node(acquire_type_table(type), d); // could be optimized
+    d->cached_successor = displaced_node->dnode;
+    d->cached_successor_dfi = d->cached_successor->dfi();
     size++;
-
-    // set up pavl nodes
-    d->pnode = pavl_probe_node(tbl, d);
-    d->type_pnode = pavl_probe_node(acquire_type_table(tnode->type), d);
-
-    // set up incoming s-link
-    successor_map[d->smap_id] = d;*/
-    std::cout << "tnode inserted with displacement dfi: " << displaced_dfi << std::endl;
+    assert(d->pnode != NULL);
+    assert(d->type_pnode != NULL);
+    assert(d->type_base_index >= 0 && d->type_base_index <= num_nodes_of_type(type));
+    //assert(d->cached_successor_dfi >= d->dfi());
   }
 
   // O(log(n))
@@ -94,13 +141,16 @@ namespace DFI {
     DNode stub;
     stub.base_index = dfi;
     stub.dfilter = NULL;
-    struct pavl_node *match = pavl_find_node(acquire_type_table(type), &stub);
-    assert(match != NULL);
+    struct pavl_node *match = pavl_find_closest_node(acquire_type_table(type), &stub);
+    assert(acquire_type_table(type)->pavl_count == 0 || match != NULL);
+    if(match == NULL)
+      return NULL;
     return pavl_dnode(match)->tnode;
   }
 
   // O(log(n))
   TNode *DFilter::get_node(int dfi) {
+    //TODO: there is a problem somewhere in here
     DNode stub;
     stub.base_index = dfi;
     stub.dfilter = NULL;
@@ -147,6 +197,35 @@ namespace DFI {
       return +1;
     else
       return 0;
+  }
+
+  void DFilter::propogate_dfi_change(DNode *node, int modification) {
+    assert(node != NULL);
+    DNode *orig_node = node;
+    int orig_base_index = node->base_index;
+    int latest_mod = node->dfilter->latest_mod;
+    node->base_index += modification;
+    for(; node != NULL; node = node->avl_parent()) {
+      if(node == NULL)
+        break;
+      if(node->base_index >= orig_base_index) {
+        if(node->pnode_has_children())
+          node->rhs_offset += modification;
+      }
+      node->mod_num = latest_mod;
+    }
+    node = orig_node;
+    int orig_type_base_index = node->type_base_index;
+    int latest_type_mod = this->latest_type_mod(node->tnode->type);
+    for(node = orig_node; node != NULL; node = node->type_avl_parent()) {
+      if(node == NULL)
+        break;
+      if(node->type_base_index >= orig_type_base_index) {
+        if(node->type_pnode_has_children())
+          node->type_rhs_offset += modification;
+      }
+      node->type_mod = latest_type_mod;
+    }
   }
 
   DNode *pavl_dnode(struct pavl_node *node) {
@@ -305,29 +384,32 @@ namespace DFI {
     assert(this != NULL);
     if(dfilter == NULL)
       return base_index; // used for stubbing
+    assert(mod_num <= dfilter->latest_mod);
     if(mod_num < dfilter->latest_mod) {
-      std::cout << "non trivial" << std::endl;
-      // must update base_index
-      assert(this != dfilter->avl_root());
-      assert(pnode != NULL);
-      assert(pnode->pavl_parent != NULL);
-      DNode *avl_parent = this->avl_parent();
-      if(pnode_is_rhs()) {
-        // this is a RHS node (in AVL tree)
-        avl_parent->dfi(); // update parent dfi
-        base_index += avl_parent->rhs_offset;
-        if(avl_parent->pnode_has_children())
-          rhs_offset += avl_parent->rhs_offset;
-        avl_parent->rhs_offset = 0;
+      if(this != dfilter->avl_root()) {
+        // must update base_index
+        assert(pnode != NULL);
+        assert(pnode->pavl_parent != NULL);
+        DNode *avl_parent = this->avl_parent();
+        if(pnode_is_rhs()) {
+          // this is a RHS node (in AVL tree)
+          avl_parent->dfi(); // update parent dfi
+          base_index += avl_parent->rhs_offset;
+          if(avl_parent->pnode_has_children())
+            rhs_offset += avl_parent->rhs_offset;
+          avl_parent->rhs_offset = 0;
+        } else {
+          // this is a LHS node (in AVL tree)
+          int orig_parent_index = avl_parent->base_index;
+          int diff = avl_parent->dfi() - orig_parent_index;
+          base_index += diff;
+          if(pnode_has_children())
+            rhs_offset += diff;
+        }
+        mod_num = this->avl_parent()->mod_num;
       } else {
-        // this is a LHS node (in AVL tree)
-        int orig_parent_index = avl_parent->base_index;
-        int diff = avl_parent->dfi() - orig_parent_index;
-        base_index += diff;
-        if(pnode_has_children())
-          rhs_offset += diff;
+        mod_num = dfilter->latest_mod;
       }
-      mod_num = avl_parent->mod_num;
     }
     assert(mod_num == dfilter->latest_mod);
     return base_index;
@@ -341,6 +423,7 @@ namespace DFI {
     if(dfilter == NULL)
       return type_base_index;
     int type = tnode->type;
+    assert(type_mod <= dfilter->latest_type_mod(type));
     if(type_mod < dfilter->latest_type_mod(type)) {
       // must update type_base_index
       assert(type_pnode != NULL);
@@ -368,12 +451,14 @@ namespace DFI {
   }
 
   DFilter::DFilter() {
+    latest_mod = -1;
     tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     troot = NULL;
     size = 0;
   }
 
   DFilter::DFilter(TNode *root) {
+    latest_mod = -1;
     tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     troot = root;
     size = 0;
@@ -428,7 +513,7 @@ namespace DFI {
   }
 
   int DFilter::latest_type_mod(int type) {
-    if(latest_type_mods.find(type) == latest_type_mods.end()) {
+    if(latest_type_mods.find(type) != latest_type_mods.end()) {
       return latest_type_mods[type];
     } else {
       return latest_type_mods[type] = 0;
@@ -436,7 +521,7 @@ namespace DFI {
   }
 
   int DFilter::increment_type_mod(int type) {
-    if(latest_type_mods.find(type) == latest_type_mods.end()) {
+    if(latest_type_mods.find(type) != latest_type_mods.end()) {
       return ++latest_type_mods[type];
     } else {
       return latest_type_mods[type] = 0;
@@ -463,7 +548,7 @@ namespace DFI {
     return last_index;
   }
   void DFilter::generate_index(TNode *root) {
-    latest_mod = -1;
+    latest_mod = 0;
     size = 0;
     int current_index = -1;
     std::unordered_map<DNode*, int> reverse_smap;
@@ -481,6 +566,7 @@ namespace DFI {
       }
       node->cached_successor_dfi = successor_index;
     }
+    assert(latest_mod == 0);
   }
 
   bool node_deleted(DNode *node) {

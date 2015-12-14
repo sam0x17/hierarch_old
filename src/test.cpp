@@ -311,26 +311,37 @@ void test_result_iteration() {
 
 int main() {
   std::cout << "test suite started" << std::endl;
+  test_generate_random_tree();
+  test_index_generation();
+  test_result_iteration();
   //std::cout << "generating random tree" << std::endl;
   std::string type_names[] = {"A", "B", "C", "D", "E"};
   int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
   //tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
-  for(int i = 0; i < 10; i++) {
-    TNode *rootA = generate_random_tree(2000, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
-    std::cout << "generating index..." << std::endl;
-    DFilter filter = DFilter(rootA);
-    std::cout << "generated index -- trying insert" << std::endl;
+  for(int i = 0; i < 2000; i++) {
+    TNode *root = generate_random_tree(2000, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
+    DFilter filter = DFilter(root);
     TNode *node = filter.get_node(i);
+    assert(node != NULL);
     std::cout << "selected parent node dfi: " << node->dnode->dfi() << std::endl;
     int insertion_index = rand_int(0, node->children.size());
-    std::cout << "insertion_index: " << insertion_index << std::endl;
-    std::cout << "node children size: " << node->children.size() << std::endl;
     filter.insert(node, insertion_index, 1);
-    TNode::delete_tree(rootA);
+    TNode::delete_tree(root);
   }
-  test_generate_random_tree();
-  test_index_generation();
-  test_result_iteration();
+  std::cout << "done with first set" << std::endl;
+  std::cout << std::endl;
+  std::cout << std::endl;
+  TNode *rootA = generate_random_tree(2000, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
+  std::cout << "generating index..." << std::endl;
+  DFilter filter = DFilter(rootA);
+  for(int i = 0; i < 2000; i++) {
+    TNode *node = filter.get_node(i);
+    assert(node != NULL);
+    std::cout << "selected parent node dfi: " << node->dnode->dfi() << std::endl;
+    int insertion_index = rand_int(0, node->children.size());
+    filter.insert(node, insertion_index, 1);
+    //TNode::delete_tree(rootA);
+  }
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "test suite finished." << std::endl;

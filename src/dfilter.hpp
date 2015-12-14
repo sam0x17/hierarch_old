@@ -26,13 +26,13 @@ namespace DFI {
 
   class DNode {
   public:
-    unsigned int mod_num;
-    unsigned int type_mod;
-    unsigned int base_index;
-    unsigned int type_base_index;
+    unsigned int mod_num = 0;
+    unsigned int type_mod = 0;
+    unsigned int base_index = 0;
+    unsigned int type_base_index = 0;
     unsigned int status_code = NODE_ALIVE;
-    int rhs_offset;
-    int type_rhs_offset;
+    int rhs_offset = 0;
+    int type_rhs_offset = 0;
     TNode *tnode;
     struct pavl_node *pnode;
     struct pavl_node *type_pnode;
@@ -69,7 +69,7 @@ namespace DFI {
   class DFilter {
   public:
     TNode *troot;
-    int latest_mod;
+    int latest_mod = 0;
     unsigned int size;
     struct pavl_table *tbl;
     std::unordered_map<int, struct pavl_table*> type_tables;
@@ -119,6 +119,7 @@ namespace DFI {
     void replace(TNode *node, int type);
 
     DNode *avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child);
+    void propogate_dfi_change(DNode *node, int modification);
   };
 
   class DResult {
