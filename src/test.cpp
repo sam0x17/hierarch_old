@@ -99,6 +99,39 @@ void tnode_to_dot_no_names_with_successor_links(TNode *root, std::string path) {
   file.close();
 }
 
+void avl_to_dot_no_names(TNode *root, std::string path) {
+  std::ofstream file;
+  file.open(path);
+  file << "digraph {\n";
+  std::queue<TNode*> q;
+  q.push(root->dnode->dfilter->avl_root()->tnode);
+  while(!q.empty()) {
+    TNode *cur = q.front();
+    q.pop();
+    std::string parent_name = "\"" + itos(cur->dnode->dfi()) + " (" + itos(cur->type) + ")\"";
+    TNode *childA = NULL;
+    TNode *childB = NULL;
+    if(cur->dnode->pnode->pavl_link[0] != NULL)
+      childA = pavl_dnode(cur->dnode->pnode->pavl_link[0])->tnode;
+      if(cur->dnode->pnode->pavl_link[1] != NULL)
+        childB = pavl_dnode(cur->dnode->pnode->pavl_link[1])->tnode;
+    if(childA != NULL) {
+      TNode *child = childA;
+      std::string child_name = "\"" + itos(child->dnode->dfi()) + " (" + itos(child->type) + ")\"";
+      file << "  " << parent_name << " -> " << child_name << ";\n";
+      q.push(child);
+    }
+    if(childB != NULL) {
+      TNode *child = childB;
+      std::string child_name = "\"" + itos(child->dnode->dfi()) + " (" + itos(child->type) + ")\"";
+      file << "  " << parent_name << " -> " << child_name << ";\n";
+      q.push(child);
+    }
+  }
+  file << "}\n";
+  file.close();
+}
+
 void tnode_to_dot_no_names(TNode *root, std::string path) {
   std::ofstream file;
   file.open(path);
@@ -318,14 +351,41 @@ int main() {
   std::string type_names[] = {"A", "B", "C", "D", "E"};
   int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
   //tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
-  for(int i = 0; i < 2000; i++) {
-    TNode *root = generate_random_tree(2000, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
+
+  for(int i = 0; i < 30; i++) {
+    TNode *root = generate_random_tree(30, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
     DFilter filter = DFilter(root);
     TNode *node = filter.get_node(i);
     assert(node != NULL);
     std::cout << "selected parent node dfi: " << node->dnode->dfi() << std::endl;
     int insertion_index = rand_int(0, node->children.size());
-    filter.insert(node, insertion_index, 1);
+    tnode_to_dot_no_names(root, "bin/before_insert.dot");
+    avl_to_dot_no_names(root, "bin/avl_before_insert.dot");
+    TNode *result = filter.insert(node, insertion_index, 1);
+    avl_to_dot_no_names(root, "bin/avl_after_insert.dot");
+    tnode_to_dot_no_names(root, "bin/after_insert.dot");
+    if(result == NULL)
+      exit(0);
+    // verify no duplicate nodes
+    std::queue<TNode*> q;
+    std::unordered_set<int> used_dfis;
+    q.push(root);
+    while(!q.empty()) {
+      TNode *node = q.front();
+      q.pop();
+      std::cout << "visiting " << node->dnode->dfi() << std::endl;
+      if(used_dfis.find(node->dnode->dfi()) != used_dfis.end()) {
+        std::cout << "VIOLATION: " << node->dnode->dfi() << std::endl;
+        exit(0);
+      }
+      //assert(used_dfis.find(node->dnode->dfi()) == used_dfis.end());
+      used_dfis.insert(node->dnode->dfi());
+      for(TNode *child : node->children) {
+        q.push(child);
+      }
+    }
+    TNode *verify = filter.get_node(result->dnode->dfi());
+    assert(verify == result);
     TNode::delete_tree(root);
   }
   std::cout << "done with first set" << std::endl;
@@ -334,12 +394,37 @@ int main() {
   TNode *rootA = generate_random_tree(2000, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
   std::cout << "generating index..." << std::endl;
   DFilter filter = DFilter(rootA);
-  for(int i = 0; i < 2000; i++) {
-    TNode *node = filter.get_node(i);
+  for(int i = 0; i < 200000; i++) {
+    std::cout << "i: " << i << std::endl;
+    int dfi = rand_int(0, filter.size);
+    std::cout << "getting node with dfi: " << dfi << std::endl;
+    TNode *node = filter.get_node(dfi);
     assert(node != NULL);
     std::cout << "selected parent node dfi: " << node->dnode->dfi() << std::endl;
     int insertion_index = rand_int(0, node->children.size());
-    filter.insert(node, insertion_index, 1);
+    TNode *result = filter.insert(node, insertion_index, 1);
+    // verify no duplicate nodes
+    std::queue<TNode*> q;
+    std::unordered_set<int> used_dfis;
+    q.push(rootA);
+    while(!q.empty()) {
+      TNode *node = q.front();
+      q.pop();
+      if(used_dfis.find(node->dnode->dfi()) != used_dfis.end()) {
+        std::cout << "VIOLATION: " << node->dnode->dfi() << std::endl;
+      }
+      //assert(used_dfis.find(node->dnode->dfi()) == used_dfis.end());
+      used_dfis.insert(node->dnode->dfi());
+      for(TNode *child : node->children) {
+        q.push(child);
+      }
+    }
+    TNode *verify = filter.get_node(result->dnode->dfi());
+    assert(result != NULL);
+    std::cout << "result node: " << result->dnode->dfi() << std::endl;
+    assert(verify != NULL);
+    std::cout << "verify node: " << verify->dnode->dfi() << std::endl;
+    assert(verify == result);
     //TNode::delete_tree(rootA);
   }
   std::cout << std::endl;

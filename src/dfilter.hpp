@@ -43,6 +43,7 @@ namespace DFI {
     unsigned int dfi();
     unsigned int type_dfi();
     DNode *avl_parent();
+
     DNode *type_avl_parent();
     DNode *type_avl_rhs();
     DNode *type_avl_lhs();
@@ -99,7 +100,7 @@ namespace DFI {
     //             of child nodes. If a node already exists at that position,
     //             that node will be pushed to the right
     //   type: the type code for the new node
-    void insert(TNode *parent, int position, int type);
+    TNode *insert(TNode *parent, int position, int type);
 
     // remove the specified tree node (along with any descendants that node
     // may have), and update the index accordingly
