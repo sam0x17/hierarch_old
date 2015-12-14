@@ -72,6 +72,53 @@ TNode *generate_random_tree(int n, int branch_dist[], int dist_size, int num_typ
   return root;
 }
 
+void tnode_to_dot_no_names_with_successor_links(TNode *root, std::string path) {
+  std::ofstream file;
+  file.open(path);
+  file << "digraph {\n";
+  std::queue<TNode *> q;
+  q.push(root);
+  while(!q.empty()) {
+    TNode *cur = q.front();
+    q.pop();
+    std::string parent_name = "\"" + itos(cur->dnode->dfi()) + " (" + itos(cur->type) + ")\"";
+    if(cur->dnode->postorder_successor() == NULL) {
+      file << "  " << parent_name << " -> " << "imaginary" << " [constraint=false arrowhead=odiamond style=dashed];\n";
+    } else {
+      DNode *successor = cur->dnode->postorder_successor();
+      std::string successor_name = "\"" + itos(successor->dfi()) + " (" + itos(successor->tnode->type) + ")\"";
+      file << "  " << parent_name << " -> " << successor_name << " [constraint=false arrowhead=odiamond style=dashed];\n";
+    }
+    for(TNode *child : cur->children) {
+      std::string child_name = "\"" + itos(child->dnode->dfi()) + " (" + itos(child->type) + ")\"";
+      file << "  " << parent_name << " -> " << child_name << ";\n";
+      q.push(child);
+    }
+  }
+  file << "}\n";
+  file.close();
+}
+
+void tnode_to_dot_no_names(TNode *root, std::string path) {
+  std::ofstream file;
+  file.open(path);
+  file << "graph {\n";
+  std::queue<TNode *> q;
+  q.push(root);
+  while(!q.empty()) {
+    TNode *cur = q.front();
+    q.pop();
+    std::string parent_name = "\"" + itos(cur->dnode->dfi()) + " (" + itos(cur->type) + ")\"";
+    for(TNode *child : cur->children) {
+      std::string child_name = "\"" + itos(child->dnode->dfi()) + " (" + itos(child->type) + ")\"";
+      file << "  " << parent_name << " -- " << child_name << ";\n";
+      q.push(child);
+    }
+  }
+  file << "}\n";
+  file.close();
+}
+
 void tnode_to_dot(TNode *root, std::string path, std::string type_names[], int num_types) {
   std::ofstream file;
   file.open(path);
@@ -143,7 +190,7 @@ void test_generate_random_tree() {
 
 TNode *generate_realistic_tree(int size, int num_types) {
   // "realistic" branching factor probability distribution
-  int branch_dist[] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 5, 6, 7, 8};
+  int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 4, 5};
   return generate_random_tree(size, branch_dist, ASIZE(branch_dist), num_types);
 }
 
@@ -169,6 +216,8 @@ void test_index_generation() {
     assert(type_sum == filter.size);
     std::queue<TNode*> q;
     q.push(root);
+    //if(size == 200)
+    //  tnode_to_dot_no_names_with_successor_links(root, "bin/debug.dot");
     while(!q.empty()) {
       TNode *node = q.front();
       q.pop();
@@ -181,6 +230,11 @@ void test_index_generation() {
       assert(dnode->type_dfi() <= dnode->dfi());
       assert(dnode->postorder_successor_dfi() <= filter.size);
       assert(dnode->postorder_successor_dfi() > dnode->dfi());
+      DNode *successor = dnode->cached_successor;
+      DNode *true_successor = get_successor_manual(dnode);
+      assert(successor == true_successor);
+      for(TNode *child : node->children)
+        q.push(child);
     }
     // test get_node
     for(int dfi = 0; dfi < size; dfi++) {
@@ -261,7 +315,7 @@ int main() {
   std::string type_names[] = {"A", "B", "C", "D", "E"};
   int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
   //tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
-  for(int i = 0; i < 2000; i++) {
+  for(int i = 0; i < 10; i++) {
     TNode *rootA = generate_random_tree(2000, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
     std::cout << "generating index..." << std::endl;
     DFilter filter = DFilter(rootA);

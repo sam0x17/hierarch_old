@@ -155,6 +155,7 @@ namespace DFI {
   }
 
   DNode *get_successor_manual(DNode *node) {
+    assert(node != NULL);
     // must go up until we can go right
     TNode *cur = node->tnode;
     while(true) {
@@ -459,7 +460,7 @@ namespace DFI {
     (*reverse_smap)[node->dnode] = last_index + 1;
     assert(base_index == node->dnode->base_index);
     (*node_map)[base_index] = node->dnode;
-    return base_index;
+    return last_index;
   }
   void DFilter::generate_index(TNode *root) {
     latest_mod = -1;

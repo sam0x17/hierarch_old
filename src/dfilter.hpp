@@ -139,6 +139,7 @@ namespace DFI {
   };
 
   DNode *pavl_dnode(struct pavl_node *node);
+  DNode *get_successor_manual(DNode *node);
   bool node_deleted(DNode *node); // hack
 }
 
