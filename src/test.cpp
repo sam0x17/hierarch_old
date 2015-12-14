@@ -160,8 +160,6 @@ void test_index_generation() {
 
     // peform fresh index checks
     assert(filter.size == size);
-    assert(filter.size == filter.imaginary_smap_id);
-    assert(filter.successor_map.size() - 1 == filter.size);
     int type_sum = 0;
     for(auto kv : filter.type_tables) {
       struct pavl_table *type_table = kv.second;
@@ -181,15 +179,8 @@ void test_index_generation() {
       assert(dnode->dfi() == dnode->base_index);
       assert(dnode->type_dfi() == dnode->type_base_index);
       assert(dnode->type_dfi() <= dnode->dfi());
-      assert(dnode->postorder_dfi() <= filter.size);
-      assert(dnode->postorder_dfi() >= 0);
-      assert(dnode->slink != NULL);
-      SLink *slink = dnode->slink;
-      assert(slink->smap_id > dnode->base_index && slink->smap_id <= size);
-      for(TNode *child : node->children) {
-        assert(child->parent == node);
-        q.push(child);
-      }
+      assert(dnode->postorder_successor_dfi() <= filter.size);
+      assert(dnode->postorder_successor_dfi() > dnode->dfi());
     }
     // test get_node
     for(int dfi = 0; dfi < size; dfi++) {

@@ -14,12 +14,14 @@ extern "C" {
 
 namespace DFI {
 
+  const unsigned int NODE_DELETED = 65182332;
+  const unsigned int NODE_ALIVE = 93390193;
+
   int compare_dnodes(const void *pavl_a, const void *pavl_b, void *pavl_param);
 
   class TNode;
   class DFilter;
   class DNode;
-  class SLink;
   class DResult;
 
   class DNode {
@@ -28,14 +30,15 @@ namespace DFI {
     unsigned int type_mod;
     unsigned int base_index;
     unsigned int type_base_index;
+    unsigned int status_code = NODE_ALIVE;
     int rhs_offset;
     int type_rhs_offset;
     TNode *tnode;
     struct pavl_node *pnode;
     struct pavl_node *type_pnode;
     DFilter *dfilter;
-    unsigned int smap_id;
-    SLink *slink;
+    DNode *cached_successor;
+    int cached_successor_dfi;
 
     unsigned int dfi();
     unsigned int type_dfi();
@@ -44,8 +47,8 @@ namespace DFI {
     DNode *type_avl_rhs();
     DNode *type_avl_lhs();
     int type_avl_hcol();
+    int postorder_successor_dfi();
     DNode *postorder_successor();
-    int postorder_dfi();
     bool pnode_is_rhs();
     bool type_pnode_is_rhs();
     bool pnode_has_children();
@@ -63,24 +66,14 @@ namespace DFI {
     static void delete_tree(TNode *&root);
   };
 
-  class SLink {
-  public:
-    int smap_id;
-    int incoming_links;
-  };
-
   class DFilter {
   public:
     TNode *troot;
     int latest_mod;
-    int imaginary_smap_id;
-    SLink *imaginary_slink;
-    int last_smap_id;
     unsigned int size;
     struct pavl_table *tbl;
     std::unordered_map<int, struct pavl_table*> type_tables;
     std::unordered_map<int, int> latest_type_mods;
-    std::unordered_map<int, DNode*> successor_map;
     //TODO: destructor (can call delete_tree) but must delete type_tables, etc
 
     DFilter();
@@ -146,6 +139,7 @@ namespace DFI {
   };
 
   DNode *pavl_dnode(struct pavl_node *node);
+  bool node_deleted(DNode *node); // hack
 }
 
 #endif

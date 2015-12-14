@@ -30,7 +30,7 @@ namespace DFI {
           displaced_node = parent->children[0];
         } else if(position == parent->children.size()) {
           // new node will be parent's last child
-          displaced_dfi = parent->dnode->postorder_dfi();
+          displaced_dfi = parent->dnode->postorder_successor_dfi();
           if(displaced_dfi < size)
             displaced_node = parent->dnode->postorder_successor()->tnode;
         } else { // new node will be an interior child
@@ -70,9 +70,6 @@ namespace DFI {
       // node will become the last node in tree
       // no propogation required
       d->type_base_index = num_nodes_of_type(type);
-      d->smap_id = ++last_smap_id;
-      successor_map[d->smap_id] = d;
-      d->slink = imaginary_slink
     }
     /*
     d->type_base_index = type_base_index;
@@ -120,24 +117,24 @@ namespace DFI {
 
   void TNode::delete_tree(TNode *&root) {
     std::queue<TNode*> q;
-    std::unordered_set<SLink*> slinks;
     q.push(root);
     while(!q.empty()) {
       TNode *cur = q.front();
       q.pop();
       for(TNode *child : cur->children)
         q.push(child);
-      if(cur->dnode != NULL && cur->dnode->slink != NULL) {
-        slinks.insert(cur->dnode->slink);
+      if(cur->dnode != NULL) {
+        cur->dnode->status_code = NODE_DELETED;
         delete cur->dnode;
+        assert(node_deleted(cur->dnode)); // hack
       }
       delete cur;
     }
-    for(SLink *slink : slinks)
-      delete slink;
-    slinks.clear();
     root = NULL;
   }
+
+  // internal methods
+
 
   int compare_dnodes(const void *pa, const void *pb, void *param)
   {
@@ -152,27 +149,84 @@ namespace DFI {
       return 0;
   }
 
-
-  // internal methods:
-
   DNode *pavl_dnode(struct pavl_node *node) {
     assert(node != NULL);
     return (DNode *)node->pavl_data;
   }
 
-  DNode *DNode::postorder_successor() {
-    assert(slink != NULL);
-    assert(dfilter != NULL);
-    return dfilter->successor_map[slink->smap_id];
+  DNode *get_successor_manual(DNode *node) {
+    // must go up until we can go right
+    TNode *cur = node->tnode;
+    while(true) {
+      if(cur == NULL)
+        return NULL;
+      TNode *parent = cur->parent;
+      if(parent != NULL && cur != parent->children[parent->children.size() - 1]) {
+        // if cur is not the rightmost child of parent
+        int pos = -1;
+        for(int i = 0; i < parent->children.size(); i++) {
+          // find position of cur in parent's children list
+          TNode *child = parent->children[i];
+          if(cur == child) {
+            pos = i;
+            break;
+          }
+        }
+        assert(pos != parent->children.size() - 1);
+        assert(pos != -1);
+        // inspect next child to the right
+        TNode *next_child = parent->children[pos + 1];
+        if(next_child->dnode->dfi() > node->dfi())
+          return next_child->dnode;
+      }
+      cur = parent;
+    }
   }
 
-  int DNode::postorder_dfi() {
-    DNode *successor = postorder_successor();
-    if(successor == NULL) {
-      assert(slink->smap_id == dfilter->imaginary_smap_id);
-      return dfilter->size;
+  DNode *DNode::postorder_successor() {
+    postorder_successor_dfi();
+    return cached_successor;
+  }
+
+  int DNode::postorder_successor_dfi() {
+    if(cached_successor != NULL) {
+      if(node_deleted(cached_successor)) {
+        // if node was just deleted (acceptable hack)
+        dfi();
+        cached_successor = get_successor_manual(this); // full update required
+        if(cached_successor == NULL)
+          cached_successor_dfi = dfilter->size;
+        else
+          cached_successor_dfi = cached_successor->dfi();
+        return cached_successor_dfi;
+      }
+      if(mod_num == dfilter->latest_mod && cached_successor->mod_num == dfilter->latest_mod)
+        return cached_successor_dfi; // no update required
     }
-    return successor->dfi();
+    int successor_orig_dfi = cached_successor_dfi;
+    int self_orig_dfi = base_index;
+    int successor_new_dfi;
+    int self_new_dfi;
+    if(cached_successor == NULL) {
+      if(cached_successor_dfi == dfilter->size)
+        return cached_successor_dfi; // no update required
+      successor_new_dfi = dfilter->size;
+    } else successor_new_dfi = cached_successor->dfi();
+    self_new_dfi = dfi();
+    if(self_orig_dfi - self_new_dfi == successor_orig_dfi - successor_new_dfi) {
+      // if the space between the node and it's successor hasn't changed
+      cached_successor_dfi = successor_new_dfi;
+      return cached_successor_dfi; // no update required
+    }
+    // there has been a change between the node and it's successor
+    // so we must perform a full update
+    dfi();
+    cached_successor = get_successor_manual(this); // full update required
+    if(cached_successor == NULL)
+      cached_successor_dfi = dfilter->size;
+    else
+      cached_successor_dfi = cached_successor->dfi();
+    return cached_successor_dfi;
   }
 
   DNode *DNode::avl_parent() {
@@ -313,14 +367,12 @@ namespace DFI {
   }
 
   DFilter::DFilter() {
-    imaginary_smap_id = -1;
     tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     troot = NULL;
     size = 0;
   }
 
   DFilter::DFilter(TNode *root) {
-    imaginary_smap_id = -1;
     tbl = pavl_create(compare_dnodes, NULL, &pavl_allocator_default);
     troot = root;
     size = 0;
@@ -338,15 +390,11 @@ namespace DFI {
     d->type_rhs_offset = type_rhs_offset;
     d->tnode = tnode;
     tnode->dnode = d;
-    d->smap_id = ++last_smap_id;
     size++;
 
     // set up pavl nodes
     d->pnode = pavl_probe_node(tbl, d);
     d->type_pnode = pavl_probe_node(acquire_type_table(tnode->type), d);
-
-    // set up incoming s-link
-    successor_map[d->smap_id] = d;
   }
 
   DNode *DFilter::avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child) {
@@ -398,55 +446,44 @@ namespace DFI {
     return (int)(acquire_type_table(type)->pavl_count);
   }
 
-  int generate_index_helper(DFilter *dfilter, TNode *node, int *current_index, std::unordered_map<DNode*, int> *reverse_smap) {
+  int generate_index_helper(DFilter *dfilter, TNode *node, int *current_index,
+                            std::unordered_map<DNode*, int> *reverse_smap,
+                            std::unordered_map<int, DNode*> *node_map) {
     (*current_index)++;
     int base_index = (*current_index);
     int type_base_index = dfilter->num_nodes_of_type(node->type);
     dfilter->assign_dnode(node, *current_index, type_base_index, 0, 0);
-    dfilter->successor_map[*current_index] = node->dnode; // default sm_ids to base_index
     int last_index = base_index;
     for(TNode *child : node->children)
-      last_index = generate_index_helper(dfilter, child, current_index, reverse_smap);
-    int postorder_successor_index = last_index + 1;
-    (*reverse_smap)[node->dnode] = postorder_successor_index;
+      last_index = generate_index_helper(dfilter, child, current_index, reverse_smap, node_map);
+    (*reverse_smap)[node->dnode] = last_index + 1;
     assert(base_index == node->dnode->base_index);
-    assert(base_index == node->dnode->smap_id);
+    (*node_map)[base_index] = node->dnode;
     return base_index;
   }
   void DFilter::generate_index(TNode *root) {
-    imaginary_smap_id = -1;
     latest_mod = -1;
-    last_smap_id = -1;
     size = 0;
     int current_index = -1;
     std::unordered_map<DNode*, int> reverse_smap;
-    generate_index_helper(this, root, &current_index, &reverse_smap);
-    // set up SLinks
-    std::unordered_map<int, SLink*> slink_map;
+    std::unordered_map<int, DNode*> node_map;
+    generate_index_helper(this, root, &current_index, &reverse_smap, &node_map);
     for(auto kv : reverse_smap) {
       DNode *node = kv.first;
-      int smap_id = kv.second;
-      SLink *slink;
-      // find an existing slink pointing to target node, or create new one
-      if(slink_map.find(smap_id) == slink_map.end()) {
-        slink = new SLink();
-        slink->incoming_links = 0;
-        slink->smap_id = smap_id;
-        slink_map[smap_id] = slink;
+      int successor_index = kv.second;
+      if(node_map.find(successor_index) != node_map.end()) {
+        node->cached_successor = node_map[successor_index];
+        assert(successor_index == node->cached_successor->base_index);
       } else {
-        slink = slink_map[smap_id];
-        slink->incoming_links++;
+        assert(successor_index == size);
+        node->cached_successor = NULL;
       }
-      node->slink = slink;
-      if(successor_map[smap_id] == NULL) {
-        assert(imaginary_smap_id == -1 || imaginary_smap_id == smap_id);
-        imaginary_smap_id = smap_id;
-        imaginary_slink = slink;
-      }
+      node->cached_successor_dfi = successor_index;
     }
-    assert(imaginary_slink != NULL);
-    slink_map.clear();
-    reverse_smap.clear();
+  }
+
+  bool node_deleted(DNode *node) {
+    return node == NULL || node->status_code == NODE_DELETED;
   }
 
   DResult::DResult(DNode *first, DNode *last, int type) {
