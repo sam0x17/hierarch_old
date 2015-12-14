@@ -409,18 +409,20 @@ namespace DFI {
           // this is a RHS node (in AVL tree)
           avl_parent->dfi(); // update parent dfi
           base_index += avl_parent->rhs_offset;
-          if(avl_parent->pnode_has_children())
+          if(avl_parent->pnode_has_children()) {
             rhs_offset += avl_parent->rhs_offset;
+            lhs_offset += avl_parent->rhs_offset;
+          }
           avl_parent->rhs_offset = 0;
         } else {
           // this is a LHS node (in AVL tree)
-          int orig_parent_index = avl_parent->base_index;
-          int diff = avl_parent->dfi() - orig_parent_index;
-          diff++;
-          std::cout << "diff: " << diff << std::endl;
-          base_index += diff;
-          if(pnode_has_children())
-            rhs_offset += diff;
+          avl_parent->dfi();
+          base_index += avl_parent->lhs_offset;
+          if(pnode_has_children()) {
+            rhs_offset += avl_parent->lhs_offset;
+            lhs_offset += avl_parent->lhs_offset;
+          }
+          avl_parent->lhs_offset = 0;
         }
         mod_num = this->avl_parent()->mod_num;
       } else {

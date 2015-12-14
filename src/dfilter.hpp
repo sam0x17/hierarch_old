@@ -32,7 +32,9 @@ namespace DFI {
     unsigned int type_base_index = 0;
     unsigned int status_code = NODE_ALIVE;
     int rhs_offset = 0;
+    int lhs_offset = 0;
     int type_rhs_offset = 0;
+    int type_lhs_offset = 0;
     TNode *tnode;
     struct pavl_node *pnode;
     struct pavl_node *type_pnode;
@@ -43,7 +45,6 @@ namespace DFI {
     unsigned int dfi();
     unsigned int type_dfi();
     DNode *avl_parent();
-
     DNode *type_avl_parent();
     DNode *type_avl_rhs();
     DNode *type_avl_lhs();
