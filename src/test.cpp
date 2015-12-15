@@ -352,42 +352,48 @@ int main() {
   int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
   //tnode_to_dot(rootA, "bin/output.dot", type_names, ASIZE(type_names));
 
-  for(int i = 0; i < 30; i++) {
-    TNode *root = generate_random_tree(30, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
-    DFilter filter = DFilter(root);
-    TNode *node = filter.get_node(i);
-    assert(node != NULL);
-    std::cout << "selected parent node dfi: " << node->dnode->dfi() << std::endl;
-    int insertion_index = rand_int(0, node->children.size());
-    tnode_to_dot_no_names(root, "bin/before_insert.dot");
-    avl_to_dot_no_names(root, "bin/avl_before_insert.dot");
-    TNode *result = filter.insert(node, insertion_index, 1);
-    avl_to_dot_no_names(root, "bin/avl_after_insert.dot");
-    tnode_to_dot_no_names(root, "bin/after_insert.dot");
-    if(result == NULL)
-      exit(0);
-    // verify no duplicate nodes
-    std::queue<TNode*> q;
-    std::unordered_set<int> used_dfis;
-    q.push(root);
-    while(!q.empty()) {
-      TNode *node = q.front();
-      q.pop();
-      std::cout << "visiting " << node->dnode->dfi() << std::endl;
-      if(used_dfis.find(node->dnode->dfi()) != used_dfis.end()) {
-        std::cout << "VIOLATION: " << node->dnode->dfi() << std::endl;
+  for(int num_nodes = 11; num_nodes < 100; num_nodes++) {
+    for(int i = 0; i < num_nodes; i++) {
+      TNode *root = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
+      DFilter filter = DFilter(root);
+      TNode *node = filter.get_node(i);
+      assert(node != NULL);
+      std::cout << "selected parent node dfi: " << node->dnode->dfi() << std::endl;
+      int insertion_index = rand_int(0, node->children.size());
+      tnode_to_dot_no_names(root, "bin/before_insert.dot");
+      avl_to_dot_no_names(root, "bin/avl_before_insert.dot");
+      TNode *result = filter.insert(node, insertion_index, 1);
+      avl_to_dot_no_names(root, "bin/avl_after_insert.dot");
+      tnode_to_dot_no_names(root, "bin/after_insert.dot");
+
+      // verify no duplicate nodes
+      std::queue<TNode*> q;
+      std::unordered_set<int> used_dfis;
+      q.push(root);
+      bool found_violation = false;
+      while(!q.empty()) {
+        TNode *node = q.front();
+        q.pop();
+        if(used_dfis.find(node->dnode->dfi()) != used_dfis.end()) {
+          std::cout << "VIOLATION: " << node->dnode->dfi() << std::endl;
+          found_violation = true;
+        }
+        //assert(used_dfis.find(node->dnode->dfi()) == used_dfis.end());
+        used_dfis.insert(node->dnode->dfi());
+        for(TNode *child : node->children) {
+          q.push(child);
+        }
+      }
+      std::cout << "^ num nodes: " << num_nodes << std::endl;
+      if(found_violation) {
         exit(0);
       }
-      //assert(used_dfis.find(node->dnode->dfi()) == used_dfis.end());
-      used_dfis.insert(node->dnode->dfi());
-      for(TNode *child : node->children) {
-        q.push(child);
-      }
+      TNode *verify = filter.get_node(result->dnode->dfi());
+      assert(verify == result);
+      TNode::delete_tree(root);
     }
-    TNode *verify = filter.get_node(result->dnode->dfi());
-    assert(verify == result);
-    TNode::delete_tree(root);
   }
+  exit(0);
   std::cout << "done with first set" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;

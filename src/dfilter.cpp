@@ -12,60 +12,45 @@ namespace DFI {
     TNode *displaced_node = NULL;
     if(parent == NULL) {
       // new node will be root
-      std::cout << "site A" << std::endl;
       displaced_dfi = 0;
       displaced_node = troot;
       assert(position == 0);
       node->add_child(troot);
       troot = node;
     } else {
-      std::cout << "site B" << std::endl;
       assert(position <= parent->children.size());
       if(parent->children.size() == 0) {
-        std::cout << "site C" << std::endl;
         // parent is a leaf
         displaced_dfi = parent->dnode->base_index + 1;
         parent->children.push_back(node);
       } else { // parent has children
-        std::cout << "site D" << std::endl;
         if(position == 0) {
-          std::cout << "site E" << std::endl;
           // new node will be parent's 1st child
-          //std::cout << "child 1 cache dfi: " << parent->children[0]->dnode->base_index << std::endl;
           displaced_dfi = parent->dnode->base_index + 1;
-          std::cout << "displaced_dfi: " << displaced_dfi << std::endl;
-          std::cout << "child 1 dfi: " << parent->children[0]->dnode->dfi() << std::endl;
           //assert(displaced_dfi == parent->children[0]->dnode->dfi());
           displaced_node = parent->children[0];
           //assert(displaced_dfi == displaced_node->dnode->dfi());
         } else if(position == parent->children.size()) {
-          std::cout << "site F" << std::endl;
           // new node will be parent's last child
           displaced_dfi = parent->dnode->postorder_successor_dfi();
           if(displaced_dfi < size) {
-            std::cout << "site G" << std::endl;
             displaced_node = parent->dnode->postorder_successor()->tnode;
           }
         } else { // new node will be an interior child
-          std::cout << "site H" << std::endl;
           displaced_dfi = parent->children[position]->dnode->dfi();
           displaced_node = parent->children[position];
         }
         // modify TNode tree accordingly
         if(position == parent->children.size()) {
-          std::cout << "push X" << std::endl;
           parent->children.push_back(node);
         } else {
-          std::cout << "push Y" << std::endl;
           parent->children.reserve(parent->children.size() + 1);
-          std::cout << "inserting node as " << position << " child" << std::endl;
           parent->children.insert(parent->children.begin() + position, node);
         }
       }
     }
     if(displaced_node == NULL) {
       displaced_node = get_node(displaced_dfi); // could still be null if last node
-      std::cout << "manual pull" << std::endl;
     }
     assert(node->parent == parent);
     assert(parent != NULL || parent->children[position] == node);
@@ -87,16 +72,15 @@ namespace DFI {
     d->mod_num = latest_mod;
     d->type_mod = latest_type_mod(type);
     d->dfilter = this;
-    //d->base_index = displaced_dfi; //TODO: change back
-    d->base_index = -1;
+    d->base_index = displaced_dfi;
     std::cout << "new node will have base index: " << displaced_dfi << std::endl;
     d->type_rhs_offset = 0;
     d->rhs_offset = 0;
+    d->lhs_offset = 0;
     d->tnode = node;
     std::cout << "displaced_dfi: " << displaced_dfi << std::endl;
     if(displaced_node == NULL) {
       assert(displaced_dfi == size);
-      std::cout << "couldn't find displaced node!" << std::endl;
       // node will become the last node in tree
       // no propogation required
       d->type_base_index = num_nodes_of_type(type);
@@ -110,9 +94,8 @@ namespace DFI {
       d->type_dfi();
       std::cout << "type A" << std::endl;
       assert(d->base_index == displaced_dfi);
-      return NULL;
+      return node;
     }
-    std::cout << "YESSSSSS" << std::endl;
     // a node will be displaced so the new node can be inserted
     // find closest type node
     TNode *closest_type_node = get_closest_node(displaced_dfi, type);
@@ -127,8 +110,8 @@ namespace DFI {
     std::cout << "post propogation displaced node dfi: " << displaced_node->dnode->dfi() << std::endl;
     d->mod_num = latest_mod;
     d->type_mod = latest_type_mod(type);
-    //d->pnode = pavl_probe_node(tbl, d); // could be optimized
-    //d->type_pnode = pavl_probe_node(acquire_type_table(type), d); // could be optimized
+    d->pnode = pavl_probe_node(tbl, d); // could be optimized
+    d->type_pnode = pavl_probe_node(acquire_type_table(type), d); // could be optimized
     d->cached_successor = displaced_node->dnode;
     d->cached_successor_dfi = d->cached_successor->dfi();
     size++;
