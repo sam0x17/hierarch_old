@@ -35,11 +35,11 @@ namespace DFI {
     int lhs_offset = 0;
     int type_rhs_offset = 0;
     int type_lhs_offset = 0;
-    TNode *tnode;
-    struct pavl_node *pnode;
-    struct pavl_node *type_pnode;
-    DFilter *dfilter;
-    DNode *cached_successor;
+    TNode *tnode = NULL;
+    struct pavl_node *pnode = NULL;
+    struct pavl_node *type_pnode = NULL;
+    DFilter *dfilter = NULL;
+    DNode *cached_successor = NULL;
     int cached_successor_dfi;
 
     unsigned int dfi();
@@ -59,10 +59,10 @@ namespace DFI {
 
   class TNode {
   public:
-    TNode *parent;
-    DNode *dnode;
+    TNode *parent = NULL;
+    DNode *dnode = NULL;
     std::vector<TNode*> children;
-    void *data;
+    void *data = NULL;
     int type = 0;
     void add_child(TNode *child);
     static void delete_tree(TNode *&root);
@@ -70,10 +70,10 @@ namespace DFI {
 
   class DFilter {
   public:
-    TNode *troot;
+    TNode *troot = NULL;
     int latest_mod = 0;
     unsigned int size;
-    struct pavl_table *tbl;
+    struct pavl_table *tbl = NULL;
     std::unordered_map<int, struct pavl_table*> type_tables;
     std::unordered_map<int, int> latest_type_mods;
     //TODO: destructor (can call delete_tree) but must delete type_tables, etc
@@ -130,10 +130,10 @@ namespace DFI {
     unsigned int mod_num;
     unsigned int type_mod;
     bool first_run = true;
-    DFilter *dfilter;
-    DNode *first;
-    DNode *last;
-    DNode *node;
+    DFilter *dfilter = NULL;
+    DNode *first = NULL;
+    DNode *last = NULL;
+    DNode *node = NULL;
   public:
     DResult(DNode *first, DNode *last, int type); // TODO: make into iterator
     TNode *next();

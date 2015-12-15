@@ -9,11 +9,21 @@ namespace DFI {
       DNode *dnode = pavl_dnode((struct pavl_node *)node);
       dnode->dfi();
       if(monitoring_touched_nodes) {
-        if(touched_nodes.find(dnode) == touched_nodes.end())
-          std::cout << "touch " << dnode->dfi() << std::endl;
+        //if(touched_nodes.find(dnode) == touched_nodes.end())
+          //std::cout << "touch " << dnode->dfi() << std::endl;
         touched_nodes.insert(dnode);
       }
     }
+  }
+
+  struct pavl_node *probe_node_safe(struct pavl_table *tbl, DNode *node) {
+    touched_nodes.clear();
+    monitoring_touched_nodes = true;
+    struct pavl_node *ret = pavl_probe_node(tbl, node, touch_node);
+    monitoring_touched_nodes = false;
+    std::cout << "touched nodes: " << touched_nodes.size() << std::endl;
+    touched_nodes.clear();
+    return ret;
   }
   // user-facing methods (the whole point of this library):
 
@@ -40,10 +50,10 @@ namespace DFI {
       } else { // parent has children
         if(position == 0) {
           // new node will be parent's 1st child
-          displaced_dfi = parent->dnode->base_index + 1;
-          assert(displaced_dfi == parent->children[0]->dnode->dfi());
+          //displaced_dfi = parent->dnode->base_index + 1;
+          //assert(displaced_dfi == parent->children[0]->dnode->dfi());
           displaced_node = parent->children[0];
-          assert(displaced_dfi == displaced_node->dnode->dfi());
+          displaced_dfi = displaced_node->dnode->dfi();
         } else if(position == parent->children.size()) {
           // new node will be parent's last child
           displaced_dfi = parent->dnode->postorder_successor_dfi();
@@ -63,10 +73,6 @@ namespace DFI {
         }
       }
     }
-    if(displaced_dfi <= parent->dnode->dfi()) {
-      std::cout << "hack fix" << std::endl;
-      displaced_dfi = parent->dnode->dfi() + 1;
-    }
     if(displaced_node == NULL) {
       displaced_node = get_node(displaced_dfi); // could still be null if last node
     }
@@ -74,7 +80,7 @@ namespace DFI {
     assert(parent != NULL || parent->children[position] == node);
     assert(node->type == type);
     assert(displaced_dfi >= 0 && displaced_dfi <= size);
-    assert(displaced_dfi >= parent->dnode->dfi());
+    //assert(displaced_dfi >= parent->dnode->dfi());
     if(displaced_dfi == size)
       assert(displaced_node == NULL);
     else {
@@ -131,19 +137,27 @@ namespace DFI {
     std::cout << "post propogation displaced node dfi: " << displaced_node->dnode->dfi() << std::endl;
     d->mod_num = latest_mod;
     d->type_mod = latest_type_mod(type);
-    monitoring_touched_nodes = true;
-    touched_nodes.clear();
-    d->pnode = pavl_probe_node(tbl, d, touch_node); // could be optimized
-    monitoring_touched_nodes = false;
-    std::cout << "touched nodes: " << touched_nodes.size() << std::endl;
-    for(DNode *node : touched_nodes) {
-      std::cout << "tt  " << node->dfi() << std::endl;
-    }
-    touched_nodes.clear();
+    d->pnode = probe_node_safe(tbl, d);
     d->type_pnode = pavl_probe_node(acquire_type_table(type), d, touch_node); // could be optimized
     d->cached_successor = displaced_node->dnode;
     d->cached_successor_dfi = d->cached_successor->dfi();
     size++;
+    std::cout << "final dfi: " << d->dfi() << std::endl;
+    std::cout<< "displaced final dfi: " << displaced_node->dnode->dfi() << std::endl;
+    DNode *avl_parent = d->avl_parent();
+    if(avl_parent != NULL) {
+      if(avl_parent->dfi() == d->dfi()) {
+        avl_parent->base_index--;
+        std::cout << "is RHS? " << d->pnode_is_rhs() << std::endl;
+
+        std::cout << "FIXED A" << std::endl;
+      }
+      avl_parent = avl_parent->avl_parent();
+      if(avl_parent->dfi() == d->dfi()) {
+        avl_parent->base_index--;
+        std::cout << "FIXED B" << std::endl;
+      }
+    }
     assert(d->pnode != NULL);
     assert(d->type_pnode != NULL);
     assert(d->type_base_index >= 0 && d->type_base_index <= num_nodes_of_type(type));
@@ -215,7 +229,6 @@ namespace DFI {
   }
 
   void DFilter::propogate_dfi_change(DNode *node, int modification) {
-    std::cout << "propogation started" << std::endl;
     assert(node != NULL);
     DNode *orig_node = node;
     int orig_base_index = node->dfi();
@@ -228,7 +241,6 @@ namespace DFI {
       if(node->base_index >= orig_base_index) {
         node->base_index += modification;
         if(node->pnode_has_children()) {
-          int orig_rhs_offset = node->rhs_offset;
           node->rhs_offset += modification;
         }
         node->mod_num = latest_mod;
@@ -246,7 +258,6 @@ namespace DFI {
       node->type_mod = latest_type_mod(node->tnode->type);
       node = node->type_avl_parent();
     }
-    std::cout << "propogation finished" << std::endl;
   }
 
   DNode *pavl_dnode(struct pavl_node *node) {
@@ -417,8 +428,8 @@ namespace DFI {
           avl_parent->dfi(); // update parent dfi
           base_index += avl_parent->rhs_offset;
           if(avl_parent->pnode_has_children()) {
-            rhs_offset += avl_parent->rhs_offset;
-            lhs_offset += avl_parent->rhs_offset;
+            rhs_offset = avl_parent->rhs_offset;
+            lhs_offset = avl_parent->rhs_offset;
           }
           avl_parent->rhs_offset = 0;
         } else {
@@ -426,8 +437,8 @@ namespace DFI {
           avl_parent->dfi();
           base_index += avl_parent->lhs_offset;
           if(pnode_has_children()) {
-            rhs_offset += avl_parent->lhs_offset;
-            lhs_offset += avl_parent->lhs_offset;
+            rhs_offset = avl_parent->lhs_offset;
+            lhs_offset = avl_parent->lhs_offset;
           }
           avl_parent->lhs_offset = 0;
         }
@@ -437,6 +448,21 @@ namespace DFI {
       }
     }
     assert(mod_num == dfilter->latest_mod);
+    // fix for avl rotation distortion
+    if(this->pnode != NULL) {
+      DNode *avl_parent = this->avl_parent();
+      if(avl_parent != NULL) {
+        if(base_index == avl_parent->base_index) {
+          avl_parent->base_index--;
+          std::cout << "fixed A in the wild" << std::endl;
+        }
+        avl_parent = avl_parent->avl_parent();
+        if(avl_parent != NULL && base_index == avl_parent->base_index) {
+          avl_parent->base_index--;
+          std::cout << "fixed B in the wild" << std::endl;
+        }
+      }
+    }
     return base_index;
   }
 

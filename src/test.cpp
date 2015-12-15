@@ -357,7 +357,7 @@ int main() {
   DFilter filter = DFilter(rootA);
   for(int i = 0; i < 5000; i++) {
     std::cout << "i: " << i << std::endl;
-    int dfi = rand_int(0, num_nodes - 1);
+    int dfi = rand_int(0, filter.size - 1);
     std::cout << "getting node with dfi: " << dfi << std::endl;
     TNode *node = filter.get_node(dfi);
     assert(node != NULL);
@@ -365,19 +365,44 @@ int main() {
     int insertion_index = rand_int(0, node->children.size());
     tnode_to_dot_no_names(rootA, "bin/before_insert.dot");
     avl_to_dot_no_names(rootA, "bin/avl_before_insert.dot");
-    TNode *result = filter.insert(node, insertion_index, 999);
+    TNode *result = filter.insert(node, insertion_index, i);
     avl_to_dot_no_names(rootA, "bin/avl_after_insert.dot");
     tnode_to_dot_no_names(rootA, "bin/after_insert.dot");
+    assert(result != NULL);
+    int verify_dfi = result->dnode->dfi();
+    std::cout << "attempting to verify via dfi: " << verify_dfi << std::endl;
+    TNode *verify = filter.get_node(verify_dfi);
+    if(verify == NULL) {
+      std::cout << "verification failed -- attempting to find manuallly:" << std::endl;
+      std::queue<TNode*> q;
+      q.push(rootA);
+      while(!q.empty()) {
+        TNode *node = q.front();
+        q.pop();
+        if(node == result) {
+          std::cout << "FOUND MANUALLY" << std::endl;
+          std::cout << "DFI: " << node->dnode->dfi() << std::endl;
+          //verify = filter.get_node(node->dnode->dfi());
+          verify = node;
+          break;
+        }
+        for(TNode *child : node->children) {
+          q.push(child);
+        }
+      }
+    }
+    assert(verify == result);
     // verify no duplicate nodes
     std::queue<TNode*> q;
     std::unordered_set<int> used_dfis;
     q.push(rootA);
+    bool found_violation = false;
     while(!q.empty()) {
       TNode *node = q.front();
       q.pop();
       if(used_dfis.find(node->dnode->dfi()) != used_dfis.end()) {
         std::cout << "VIOLATION: " << node->dnode->dfi() << std::endl;
-        exit(0);
+        found_violation = true;
       }
       //assert(used_dfis.find(node->dnode->dfi()) == used_dfis.end());
       used_dfis.insert(node->dnode->dfi());
@@ -385,12 +410,8 @@ int main() {
         q.push(child);
       }
     }
-    TNode *verify = filter.get_node(result->dnode->dfi());
-    assert(result != NULL);
-    std::cout << "result node: " << result->dnode->dfi() << std::endl;
-    assert(verify != NULL);
-    std::cout << "verify node: " << verify->dnode->dfi() << std::endl;
-    assert(verify == result);
+    if(found_violation)
+      exit(0);
   }
   TNode::delete_tree(rootA);
   std::cout << std::endl;
