@@ -1,15 +1,25 @@
 #include "dfilter.hpp"
 namespace DFI {
 
+  std::unordered_set<DNode*> touched_nodes;
+  bool monitoring_touched_nodes = false;
+
   void touch_node(void *node) {
-    if(node != NULL)
-      pavl_dnode((struct pavl_node *)node)->dfi();
+    if(node != NULL) {
+      DNode *dnode = pavl_dnode((struct pavl_node *)node);
+      dnode->dfi();
+      if(monitoring_touched_nodes) {
+        if(touched_nodes.find(dnode) == touched_nodes.end())
+          std::cout << "touch " << dnode->dfi() << std::endl;
+        touched_nodes.insert(dnode);
+      }
+    }
   }
   // user-facing methods (the whole point of this library):
 
   TNode *DFilter::insert(TNode *parent, int position, int type) {
     TNode *node = new TNode();
-    node->type = type = 99;
+    node->type = type;
     node->parent = parent;
     parent->dnode->dfi();
     int displaced_dfi;
@@ -31,9 +41,9 @@ namespace DFI {
         if(position == 0) {
           // new node will be parent's 1st child
           displaced_dfi = parent->dnode->base_index + 1;
-          //assert(displaced_dfi == parent->children[0]->dnode->dfi());
+          assert(displaced_dfi == parent->children[0]->dnode->dfi());
           displaced_node = parent->children[0];
-          //assert(displaced_dfi == displaced_node->dnode->dfi());
+          assert(displaced_dfi == displaced_node->dnode->dfi());
         } else if(position == parent->children.size()) {
           // new node will be parent's last child
           displaced_dfi = parent->dnode->postorder_successor_dfi();
@@ -52,6 +62,10 @@ namespace DFI {
           parent->children.insert(parent->children.begin() + position, node);
         }
       }
+    }
+    if(displaced_dfi <= parent->dnode->dfi()) {
+      std::cout << "hack fix" << std::endl;
+      displaced_dfi = parent->dnode->dfi() + 1;
     }
     if(displaced_node == NULL) {
       displaced_node = get_node(displaced_dfi); // could still be null if last node
@@ -90,10 +104,13 @@ namespace DFI {
       d->type_base_index = num_nodes_of_type(type);
       d->cached_successor = NULL;
       d->cached_successor_dfi = ++size;
+      monitoring_touched_nodes = true;
+      touched_nodes.clear();
       d->pnode = pavl_probe_node(tbl, d, touch_node);
+      monitoring_touched_nodes = false;
+      std::cout << "touched nodes: " << touched_nodes.size() << std::endl;
+      touched_nodes.clear();
       d->type_pnode = pavl_probe_node(acquire_type_table(type), d, touch_node);
-      avl_root()->mod_num = ++latest_mod;
-      type_avl_root(type)->type_mod = increment_type_mod(type);
       d->dfi();
       d->type_dfi();
       std::cout << "type A" << std::endl;
@@ -114,16 +131,24 @@ namespace DFI {
     std::cout << "post propogation displaced node dfi: " << displaced_node->dnode->dfi() << std::endl;
     d->mod_num = latest_mod;
     d->type_mod = latest_type_mod(type);
+    monitoring_touched_nodes = true;
+    touched_nodes.clear();
     d->pnode = pavl_probe_node(tbl, d, touch_node); // could be optimized
+    monitoring_touched_nodes = false;
+    std::cout << "touched nodes: " << touched_nodes.size() << std::endl;
+    for(DNode *node : touched_nodes) {
+      std::cout << "tt  " << node->dfi() << std::endl;
+    }
+    touched_nodes.clear();
     d->type_pnode = pavl_probe_node(acquire_type_table(type), d, touch_node); // could be optimized
     d->cached_successor = displaced_node->dnode;
     d->cached_successor_dfi = d->cached_successor->dfi();
     size++;
-    //assert(d->pnode != NULL);
-    //assert(d->type_pnode != NULL);
-    //assert(d->type_base_index >= 0 && d->type_base_index <= num_nodes_of_type(type));
+    assert(d->pnode != NULL);
+    assert(d->type_pnode != NULL);
+    assert(d->type_base_index >= 0 && d->type_base_index <= num_nodes_of_type(type));
+    assert(d->cached_successor_dfi >= d->dfi());
     return node;
-    //assert(d->cached_successor_dfi >= d->dfi());
   }
 
   // O(log(n))
@@ -198,18 +223,13 @@ namespace DFI {
     int target_dfi = orig_base_index + modification;
     int taret_type_dfi = orig_type_base_index + modification;
     latest_mod++;
-    std::cout << "orig_base_index: " << orig_base_index << std::endl;
-    std::cout << "orig_type_base_index " << orig_type_base_index << std::endl;
     increment_type_mod(node->tnode->type);
     while(node != NULL) {
-      std::cout << "current node base index: " << node->base_index << std::endl;
       if(node->base_index >= orig_base_index) {
         node->base_index += modification;
-        std::cout << "current node base index changed to: " << node->base_index << std::endl;
         if(node->pnode_has_children()) {
           int orig_rhs_offset = node->rhs_offset;
           node->rhs_offset += modification;
-          std::cout << "current node rhs_offset changed from " << orig_rhs_offset << " to " << node->rhs_offset << std::endl;
         }
         node->mod_num = latest_mod;
       }
