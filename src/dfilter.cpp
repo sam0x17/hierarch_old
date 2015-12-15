@@ -1,6 +1,10 @@
 #include "dfilter.hpp"
 namespace DFI {
 
+  void touch_node(void *node) {
+    if(node != NULL)
+      pavl_dnode((struct pavl_node *)node)->dfi();
+  }
   // user-facing methods (the whole point of this library):
 
   TNode *DFilter::insert(TNode *parent, int position, int type) {
@@ -86,8 +90,8 @@ namespace DFI {
       d->type_base_index = num_nodes_of_type(type);
       d->cached_successor = NULL;
       d->cached_successor_dfi = ++size;
-      d->pnode = pavl_probe_node(tbl, d);
-      d->type_pnode = pavl_probe_node(acquire_type_table(type), d);
+      d->pnode = pavl_probe_node(tbl, d, touch_node);
+      d->type_pnode = pavl_probe_node(acquire_type_table(type), d, touch_node);
       avl_root()->mod_num = ++latest_mod;
       type_avl_root(type)->type_mod = increment_type_mod(type);
       d->dfi();
@@ -110,8 +114,8 @@ namespace DFI {
     std::cout << "post propogation displaced node dfi: " << displaced_node->dnode->dfi() << std::endl;
     d->mod_num = latest_mod;
     d->type_mod = latest_type_mod(type);
-    d->pnode = pavl_probe_node(tbl, d); // could be optimized
-    d->type_pnode = pavl_probe_node(acquire_type_table(type), d); // could be optimized
+    d->pnode = pavl_probe_node(tbl, d, touch_node); // could be optimized
+    d->type_pnode = pavl_probe_node(acquire_type_table(type), d, touch_node); // could be optimized
     d->cached_successor = displaced_node->dnode;
     d->cached_successor_dfi = d->cached_successor->dfi();
     size++;
@@ -480,8 +484,8 @@ namespace DFI {
     size++;
 
     // set up pavl nodes
-    d->pnode = pavl_probe_node(tbl, d);
-    d->type_pnode = pavl_probe_node(acquire_type_table(tnode->type), d);
+    d->pnode = pavl_probe_node(tbl, d, touch_node);
+    d->type_pnode = pavl_probe_node(acquire_type_table(tnode->type), d, touch_node);
   }
 
   DNode *DFilter::avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child) {
