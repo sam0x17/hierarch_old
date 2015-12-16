@@ -26,31 +26,31 @@ namespace DFI {
 
   class DNode {
   public:
-    int mod_num = 0;
-    int type_mod = 0;
     int base_index = 0;
     int type_base_index = 0;
-    int status_code = NODE_ALIVE;
-    int rhs_offset = 0;
-    int lhs_offset = 0;
-    int type_rhs_offset = 0;
-    int type_lhs_offset = 0;
+    int base_mod = 0;
+    int type_mod = 0;
+    int cached_parent_dfi = 0;
+    int cached_type_parent_dfi = 0;
+    int cached_successor_dfi = 0;
+    int status = NODE_ALIVE;
     TNode *tnode = NULL;
     struct pavl_node *pnode = NULL;
     struct pavl_node *type_pnode = NULL;
     DFilter *dfilter = NULL;
     DNode *cached_successor = NULL;
-    int cached_successor_dfi;
 
     int dfi();
     int type_dfi();
+    DNode *parent();
+    DNode *type_parent(int type);
     DNode *avl_parent();
     DNode *type_avl_parent();
     DNode *type_avl_rhs();
     DNode *type_avl_lhs();
-    int type_avl_hcol();
     int postorder_successor_dfi();
     DNode *postorder_successor();
+    DNode *postorder_predecessor();
     bool pnode_is_rhs();
     bool type_pnode_is_rhs();
     bool pnode_has_children();
@@ -83,17 +83,19 @@ namespace DFI {
     DNode *avl_root();
     DNode *type_avl_root(int type);
     void generate_index(TNode *root);
-    void assign_dnode(TNode *tnode, int base_index, int type_base_index, int rhs_offset, int type_rhs_offset);
+    void assign_dnode(TNode *tnode, int base_index, int type_base_index);
     struct pavl_table *acquire_type_table(int type);
     int num_nodes_of_type(int type);
     int latest_type_mod(int type);
     int increment_type_mod(int type);
+    int decrement_type_mod(int type);
     TNode *get_node(int dfi);
     TNode *get_closest_node(int dfi, int type);
 
     // insert a new tree node at the specified location and update
     // index accordingly
-    // complexity: O(log(n))
+    // complexity: O(T)
+    // T = number of nodes between this node and the root
     // params:
     //   parent: the TNode that should be the parent of this new node
     //           if parent is NULL, TNode will be inserted as root
@@ -120,14 +122,13 @@ namespace DFI {
     //   type: the type to change this node to
     void replace(TNode *node, int type);
 
-    DNode *avl_insert_between(struct pavl_node *parent, TNode *tnode, struct pavl_node *child);
-    void propogate_dfi_change(DNode *node, int modification);
+    void propagate_dfi_change(DNode *node, int delta);
   };
 
   class DResult {
   private:
     int type;
-    int mod_num;
+    int base_mod;
     int type_mod;
     bool first_run = true;
     DFilter *dfilter = NULL;
