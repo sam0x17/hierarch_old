@@ -372,43 +372,37 @@ int main() {
     int verify_dfi = result->dnode->dfi();
     std::cout << "attempting to verify via dfi: " << verify_dfi << std::endl;
     TNode *verify = filter.get_node(verify_dfi);
-    if(verify == NULL) {
-      std::cout << "verification failed -- attempting to find manuallly:" << std::endl;
-      std::queue<TNode*> q;
-      q.push(rootA);
-      while(!q.empty()) {
-        TNode *node = q.front();
-        q.pop();
-        if(node == result) {
-          std::cout << "FOUND MANUALLY" << std::endl;
-          std::cout << "DFI: " << node->dnode->dfi() << std::endl;
-          //verify = filter.get_node(node->dnode->dfi());
-          verify = node;
-          break;
-        }
-        for(TNode *child : node->children) {
-          q.push(child);
-        }
-      }
-    }
+    assert(verify != NULL);
+    std::cout << "verify dfi again: " << result->dnode->dfi() << std::endl;
     assert(verify == result);
     // verify no duplicate nodes
-    std::queue<TNode*> q;
+
     std::unordered_set<int> used_dfis;
-    q.push(rootA);
     bool found_violation = false;
-    while(!q.empty()) {
-      TNode *node = q.front();
-      q.pop();
-      if(used_dfis.find(node->dnode->dfi()) != used_dfis.end()) {
-        std::cout << "VIOLATION: " << node->dnode->dfi() << std::endl;
+    int current_dfi = -1;
+    std::stack<TNode*> s;
+    s.push(rootA);
+    while(!s.empty()) {
+      current_dfi++;
+      TNode *node = s.top();
+      s.pop();
+      for(int c = node->children.size() - 1; c >= 0; c--) {
+        // have to move RTL to get correct results with stack-based dfs
+        s.push(node->children[c]);
+      }
+      int dfi = node->dnode->dfi();
+      if(used_dfis.find(dfi) != used_dfis.end()) {
+        std::cout << "VIOLATION: " << dfi << std::endl;
         found_violation = true;
       }
-      //assert(used_dfis.find(node->dnode->dfi()) == used_dfis.end());
-      used_dfis.insert(node->dnode->dfi());
-      for(TNode *child : node->children) {
-        q.push(child);
+      std::cout << "      node DFI: " << dfi << " " << node->type << std::endl;
+      std::cout << "  expected DFI: " << current_dfi << std::endl;
+      if(dfi != current_dfi) {
+        std::cout << "INCORRECT OR MISSING DFI" << std::endl;
       }
+      assert(dfi == current_dfi);
+      //assert(used_dfis.find(node->dnode->dfi()) == used_dfis.end());
+      used_dfis.insert(dfi);
     }
     if(found_violation)
       exit(0);

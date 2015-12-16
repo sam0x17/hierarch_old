@@ -27,6 +27,7 @@ namespace DFI {
   }
   // user-facing methods (the whole point of this library):
 
+  bool inserting_node = false;
   TNode *DFilter::insert(TNode *parent, int position, int type) {
     TNode *node = new TNode();
     node->type = type;
@@ -76,6 +77,7 @@ namespace DFI {
     if(displaced_node == NULL) {
       displaced_node = get_node(displaced_dfi); // could still be null if last node
     }
+    inserting_node = true;
     assert(node->parent == parent);
     assert(parent != NULL || parent->children[position] == node);
     assert(node->type == type);
@@ -114,6 +116,7 @@ namespace DFI {
       touched_nodes.clear();
       d->pnode = pavl_probe_node(tbl, d, touch_node);
       monitoring_touched_nodes = false;
+      inserting_node = false;
       std::cout << "touched nodes: " << touched_nodes.size() << std::endl;
       touched_nodes.clear();
       d->type_pnode = pavl_probe_node(acquire_type_table(type), d, touch_node);
@@ -138,6 +141,7 @@ namespace DFI {
     d->mod_num = latest_mod;
     d->type_mod = latest_type_mod(type);
     d->pnode = probe_node_safe(tbl, d);
+    inserting_node = false;
     d->type_pnode = pavl_probe_node(acquire_type_table(type), d, touch_node); // could be optimized
     d->cached_successor = displaced_node->dnode;
     d->cached_successor_dfi = d->cached_successor->dfi();
@@ -149,7 +153,6 @@ namespace DFI {
       if(avl_parent->dfi() == d->dfi()) {
         avl_parent->base_index--;
         std::cout << "is RHS? " << d->pnode_is_rhs() << std::endl;
-
         std::cout << "FIXED A" << std::endl;
       }
       avl_parent = avl_parent->avl_parent();
@@ -183,10 +186,13 @@ namespace DFI {
     DNode stub;
     stub.base_index = dfi;
     stub.dfilter = NULL;
-    struct pavl_node *match = pavl_find_node(tbl, &stub);
+    struct pavl_node *match = pavl_find_closest_node(tbl, &stub);
     if(match == NULL)
       return NULL;
-    return pavl_dnode(match)->tnode;
+    DNode *ret = pavl_dnode(match);
+    if(ret->dfi() == dfi)
+      return ret->tnode;
+    return NULL;
   }
 
   void TNode::add_child(TNode *child) {
@@ -412,7 +418,8 @@ namespace DFI {
   // O(log(n)) if mod_num is out of date
   // O(1) if mod_num is up to date
   // updates mod_num if not already up to date
-  unsigned int DNode::dfi() {
+  bool no_sideways_prop = false;
+  int DNode::dfi() {
     assert(this != NULL);
     if(dfilter == NULL)
       return base_index; // used for stubbing
@@ -453,14 +460,45 @@ namespace DFI {
       DNode *avl_parent = this->avl_parent();
       if(avl_parent != NULL) {
         if(base_index == avl_parent->base_index) {
-          avl_parent->base_index--;
-          std::cout << "fixed A in the wild" << std::endl;
+          //avl_parent->base_index--;
+          //std::cout << "fixed A in the wild" << std::endl;
         }
         avl_parent = avl_parent->avl_parent();
         if(avl_parent != NULL && base_index == avl_parent->base_index) {
-          avl_parent->base_index--;
-          std::cout << "fixed B in the wild" << std::endl;
+          //avl_parent->base_index--;
+          //std::cout << "fixed B in the wild" << std::endl;
         }
+      }
+    }
+    if(!inserting_node) {
+      if(tnode->parent != NULL) {
+        TNode *parent = tnode->parent;
+        if(parent->children[0] == tnode) {
+          if(base_index != parent->dnode->base_index + 1) {
+            std::cout << "FIX A ACTIVATED" << std::endl;
+            base_index = parent->dnode->base_index + 1;
+          }
+        } else if(!no_sideways_prop) {
+          for(int i = 1; i < parent->children.size(); i++) {
+            if(parent->children[i] == tnode) {
+              TNode *previous_child = parent->children[i - 1];
+              if(previous_child->children.size() == 0) {
+                no_sideways_prop = true;
+                int prev_dfi = previous_child->dnode->dfi();
+                no_sideways_prop = false;
+                if(base_index != prev_dfi + 1) {
+                  std::cout << "FIX B ACTIVATED" << std::endl;
+                  base_index = prev_dfi + 1;
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
+      if(base_index >= dfilter->size) {
+        std::cout << "FIX C ACTIVATED" << std::endl;
+        base_index = dfilter->size;
       }
     }
     return base_index;
@@ -469,7 +507,7 @@ namespace DFI {
   // O(log(n)) if type_mod is out of date
   // O(1) if type_mod is up to date
   // updates type_mod if not already up to date
-  unsigned int DNode::type_dfi() {
+  int DNode::type_dfi() {
     assert(this != NULL);
     if(dfilter == NULL)
       return type_base_index;
@@ -516,7 +554,7 @@ namespace DFI {
     generate_index(root);
   }
 
-  void DFilter::assign_dnode(TNode *tnode, unsigned int base_index, unsigned int type_base_index, int rhs_offset, int type_rhs_offset) {
+  void DFilter::assign_dnode(TNode *tnode, int base_index, int type_base_index, int rhs_offset, int type_rhs_offset) {
     DNode *d = tnode->dnode = new DNode();
     d->mod_num = latest_mod;
     d->type_mod = latest_type_mod(tnode->type);
@@ -687,7 +725,7 @@ namespace DFI {
     }
   }
 
-  unsigned int DResult::size() {
+  int DResult::size() {
     if(first == NULL)
       return 0; // empty result
     assert(mod_num == dfilter->latest_mod);

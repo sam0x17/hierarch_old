@@ -14,8 +14,8 @@ extern "C" {
 
 namespace DFI {
 
-  const unsigned int NODE_DELETED = 65182332;
-  const unsigned int NODE_ALIVE = 93390193;
+  const int NODE_DELETED = 65182332;
+  const int NODE_ALIVE = 93390193;
 
   int compare_dnodes(const void *pavl_a, const void *pavl_b, void *pavl_param);
 
@@ -26,11 +26,11 @@ namespace DFI {
 
   class DNode {
   public:
-    unsigned int mod_num = 0;
-    unsigned int type_mod = 0;
-    unsigned int base_index = 0;
-    unsigned int type_base_index = 0;
-    unsigned int status_code = NODE_ALIVE;
+    int mod_num = 0;
+    int type_mod = 0;
+    int base_index = 0;
+    int type_base_index = 0;
+    int status_code = NODE_ALIVE;
     int rhs_offset = 0;
     int lhs_offset = 0;
     int type_rhs_offset = 0;
@@ -42,8 +42,8 @@ namespace DFI {
     DNode *cached_successor = NULL;
     int cached_successor_dfi;
 
-    unsigned int dfi();
-    unsigned int type_dfi();
+    int dfi();
+    int type_dfi();
     DNode *avl_parent();
     DNode *type_avl_parent();
     DNode *type_avl_rhs();
@@ -72,7 +72,7 @@ namespace DFI {
   public:
     TNode *troot = NULL;
     int latest_mod = 0;
-    unsigned int size;
+    int size;
     struct pavl_table *tbl = NULL;
     std::unordered_map<int, struct pavl_table*> type_tables;
     std::unordered_map<int, int> latest_type_mods;
@@ -83,7 +83,7 @@ namespace DFI {
     DNode *avl_root();
     DNode *type_avl_root(int type);
     void generate_index(TNode *root);
-    void assign_dnode(TNode *tnode, unsigned int base_index, unsigned int type_base_index, int rhs_offset, int type_rhs_offset);
+    void assign_dnode(TNode *tnode, int base_index, int type_base_index, int rhs_offset, int type_rhs_offset);
     struct pavl_table *acquire_type_table(int type);
     int num_nodes_of_type(int type);
     int latest_type_mod(int type);
@@ -127,8 +127,8 @@ namespace DFI {
   class DResult {
   private:
     int type;
-    unsigned int mod_num;
-    unsigned int type_mod;
+    int mod_num;
+    int type_mod;
     bool first_run = true;
     DFilter *dfilter = NULL;
     DNode *first = NULL;
@@ -138,7 +138,7 @@ namespace DFI {
     DResult(DNode *first, DNode *last, int type); // TODO: make into iterator
     TNode *next();
     bool has_next();
-    unsigned int size();
+    int size();
   };
 
   DNode *pavl_dnode(struct pavl_node *node);
