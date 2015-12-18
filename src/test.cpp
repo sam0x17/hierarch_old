@@ -325,7 +325,7 @@ void test_insertion_stability() {
   int num_nodes = 1;
   TNode *rootA = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
   DFilter filter = DFilter(rootA);
-  for(int i = 0; i < 8000; i++) {
+  for(int i = 0; i < 5000; i++) {
     int dfi = rand_int(0, filter.size - 1);
     TNode *node = filter.get_node(dfi);
     assert(node != NULL);
@@ -468,8 +468,8 @@ struct naive_result get_descendants_by_type_naive(TNode *node, int type) {
 void test_get_descendants_by_type() {
   std::cout << "testing get descendants by type... " << std::flush;
   int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5, 8};
-  int num_types = 8;
-  int num_nodes = 10000;
+  int num_types = 35;
+  int num_nodes = 100000;
   TNode *root = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), num_types);
   DFilter filter = DFilter(root);
   for(int i = 0; i < filter.size; i++) {
