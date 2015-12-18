@@ -89,6 +89,7 @@ namespace DFI {
 
     DFilter();
     DFilter(TNode *root);
+    ~DFilter();
     DNode *avl_root();
     DNode *type_avl_root(int type);
     void generate_index(TNode *root);
@@ -148,6 +149,7 @@ namespace DFI {
   DNode *pavl_dnode(struct pavl_node *node);
   DNode *get_successor_manual(DNode *node);
   bool node_deleted(DNode *node); // hack
+  void dummy_item_func(void *pavl_item, void *pavl_param);
 }
 
 #endif

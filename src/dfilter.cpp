@@ -25,6 +25,17 @@ namespace DFI {
     return DResult(start_node, end_node, type);
   }
 
+  // insert a new tree node at the specified location and update
+  // index accordingly
+  // complexity: O(T)
+  // T = number of nodes between this node and the root
+  // params:
+  //   parent: the TNode that should be the parent of this new node
+  //           if parent is NULL, TNode will be inserted as root
+  //   position: the position of the new node in the parent's collection
+  //             of child nodes. If a node already exists at that position,
+  //             that node will be pushed to the right
+  //   type: the type code for the new node
   TNode *DFilter::insert(TNode *parent, int position, int type) {
     TNode *node = new TNode();
     node->type = type;
@@ -136,6 +147,8 @@ namespace DFI {
     return node;
   }
 
+  // internal methods
+
   // O(log(n_t))
   // modified AVL search that finds either the lowest node of type type
   // greater than dfi or the highest node of type type less than dfi depending
@@ -200,6 +213,9 @@ namespace DFI {
   }
 
   void TNode::delete_tree(TNode *&root) {
+    DFilter *dfilter = NULL;
+    if(root->dnode != NULL)
+      dfilter = root->dnode->dfilter;
     std::queue<TNode*> q;
     q.push(root);
     while(!q.empty()) {
@@ -208,17 +224,28 @@ namespace DFI {
       for(TNode *child : cur->children)
         q.push(child);
       if(cur->dnode != NULL) {
+        assert(cur->dnode->status != NODE_DELETED);
         cur->dnode->status = NODE_DELETED;
         delete cur->dnode;
-        assert(node_deleted(cur->dnode)); // hack
       }
       delete cur;
+    }
+    if(dfilter != NULL) {
+      if(dfilter->tbl != NULL)
+        pavl_destroy(dfilter->tbl, dummy_item_func);
+      for(auto kv : dfilter->type_tables) {
+        struct pavl_table *table = kv.second;
+        pavl_destroy(table, dummy_item_func);
+      }
+      dfilter->type_tables.clear();
+      dfilter->min_type_bounds.clear();
+      dfilter->max_type_bounds.clear();
+      dfilter->latest_type_mods.clear();
     }
     root = NULL;
   }
 
-  // internal methods
-
+  void dummy_item_func(void *pavl_item, void *pavl_param) {}
 
   int compare_dnodes(const void *pa, const void *pb, void *param)
   {
@@ -547,6 +574,11 @@ namespace DFI {
     troot = root;
     size = 0;
     generate_index(root);
+  }
+
+  DFilter::~DFilter() {
+    if(troot != NULL)
+      TNode::delete_tree(troot);
   }
 
   void DFilter::assign_dnode(TNode *tnode, int base_index, int type_base_index) {

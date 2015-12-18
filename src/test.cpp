@@ -312,7 +312,7 @@ void test_index_generation() {
       assert(node->dnode->dfilter == &filter);
       assert(node->dnode->dfi() == dfi);
     }
-    TNode::delete_tree(root);
+    //TNode::delete_tree(root);
     std::cout << "[OK]" << std::endl;
   }
 }
@@ -325,7 +325,7 @@ void test_insertion_stability() {
   int num_nodes = 1;
   TNode *rootA = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
   DFilter filter = DFilter(rootA);
-  for(int i = 0; i < 5000; i++) {
+  for(int i = 0; i < 8000; i++) {
     int dfi = rand_int(0, filter.size - 1);
     TNode *node = filter.get_node(dfi);
     assert(node != NULL);
@@ -366,7 +366,7 @@ void test_insertion_stability() {
     if(found_violation)
       exit(0);
   }
-  TNode::delete_tree(rootA);
+  //TNode::delete_tree(rootA);
   std::cout << " [OK]" << std::endl;
 }
 
@@ -426,7 +426,7 @@ void test_result_iteration() {
       assert(empty_res.has_next() == false);
       assert(empty_res.next() == NULL);
     }
-    TNode::delete_tree(root);
+    //TNode::delete_tree(root);
     std::cout << "[OK]" << std::endl;
   }
 }
@@ -498,7 +498,6 @@ int main() {
   test_result_iteration();
   test_insertion_stability();
   test_get_descendants_by_type();
-  std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "test suite finished." << std::endl;
   std::cout << std::endl;
