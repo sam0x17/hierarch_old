@@ -48,6 +48,8 @@ namespace DFI {
     DNode *type_avl_parent();
     DNode *type_avl_rhs();
     DNode *type_avl_lhs();
+    DNode *type_pnode_rhs();
+    DNode *type_pnode_lhs();
     int postorder_successor_dfi();
     DNode *postorder_successor();
     DNode *postorder_predecessor();
@@ -66,6 +68,11 @@ namespace DFI {
     int type = 0;
     void add_child(TNode *child);
     static void delete_tree(TNode *&root);
+  };
+
+  struct backtrack_result {
+    TNode *node = NULL;
+    TNode *backtrack = NULL;
   };
 
   class DFilter {
@@ -91,6 +98,13 @@ namespace DFI {
     int decrement_type_mod(int type);
     TNode *get_node(int dfi);
     TNode *get_closest_node(int dfi, int type);
+    DNode *get_bound_node(int dfi, int type, bool gth);
+
+    // returns an DResult iterator (has iterator + count) containing
+    // all nodes of the specified type that are descendants of the
+    // specified node
+    // complexity: O(log(n_t))
+    DResult get_descendants_by_type(TNode *node, int type);
 
     // insert a new tree node at the specified location and update
     // index accordingly
@@ -105,28 +119,11 @@ namespace DFI {
     //   type: the type code for the new node
     TNode *insert(TNode *parent, int position, int type);
 
-    // remove the specified tree node (along with any descendants that node
-    // may have), and update the index accordingly
-    // complexity: O(log(n)*m) where m is the number of nodes removed
-    // params:
-    //   node: pointer to the node to remove
-    void remove(TNode *node);
-
-    // changes the type of the specified tree node to the specified type and
-    // updates the index accordingly
-    // complexity: O(log(n_t)) where n_t is the number of nodes of type t in
-    //             the tree and t is the the type from (new type, old type) that
-    //             has more instantiations in the tree
-    // parems:
-    //   node: pointer to the node to be replaced
-    //   type: the type to change this node to
-    void replace(TNode *node, int type);
-
     void propagate_dfi_change(DNode *node, int delta);
   };
 
   class DResult {
-  private:
+  public:
     int type;
     int base_mod;
     int type_mod;
@@ -135,8 +132,8 @@ namespace DFI {
     DNode *first = NULL;
     DNode *last = NULL;
     DNode *node = NULL;
-  public:
-    DResult(DNode *first, DNode *last, int type); // TODO: make into iterator
+    DResult();
+    DResult(DNode *first, DNode *last, int type); // TODO: make into C++11 iterator
     TNode *next();
     bool has_next();
     int size();

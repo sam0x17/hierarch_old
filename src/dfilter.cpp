@@ -3,6 +3,26 @@ namespace DFI {
 
   // user-facing methods (the whole point of this library):
 
+  // returns an DResult iterator (has iterator + count) containing
+  // all nodes of the specified type that are descendants of the
+  // specified node
+  // complexity: O(log(n_t))
+  DResult DFilter::get_descendants_by_type(TNode *node, int type) {
+    if(node->children.size() == 0)
+      return DResult(NULL, NULL, type);
+    int start_dfi = node->dnode->dfi();
+    int end_dfi = node->dnode->postorder_successor_dfi();
+    DNode *start_node = get_bound_node(start_dfi + 1, type, true);
+    if(start_node == NULL)
+      return DResult(NULL, NULL, type);
+    if(start_node->dfi() == end_dfi - 1)
+      return DResult(start_node, start_node, type);
+    DNode *end_node = get_bound_node(end_dfi - 1, type, false);
+    if(end_node == NULL || start_node->dfi() > end_node->dfi())
+      return DResult(NULL, NULL, type);
+    return DResult(start_node, end_node, type);
+  }
+
   TNode *DFilter::insert(TNode *parent, int position, int type) {
     TNode *node = new TNode();
     node->type = type;
@@ -14,41 +34,31 @@ namespace DFI {
       // new node will be root
       displaced_dfi = 0;
       displaced_node = troot;
-      std::cout << "A" << std::endl;
       assert(position == 0);
     } else {
       assert(position <= parent->children.size());
       if(parent->children.size() == 0) {
         // parent is a leaf
         displaced_dfi = parent->dnode->base_index + 1;
-        std::cout << "B" << std::endl;
       } else { // parent has children
         if(position == 0) {
           // new node will be parent's 1st child
           displaced_dfi = parent->dnode->base_index + 1;
           displaced_node = parent->children[0];
           assert(displaced_dfi == parent->children[0]->dnode->dfi());
-          std::cout << "E" << std::endl;
         } else if(position == parent->children.size()) {
           // new node will be parent's last child
           parent->dnode->cached_successor = NULL; // force successor refresh
           displaced_dfi = parent->dnode->postorder_successor_dfi();
-          std::cout << "DISPLACED DFI: " << displaced_dfi << std::endl;
-          std::cout << "C" << std::endl;
         } else { // new node will be an interior child
           displaced_dfi = parent->children[position]->dnode->dfi();
           displaced_node = parent->children[position];
-          std::cout << "D" << std::endl;
         }
       }
     }
     if(displaced_node == NULL) {
-      std::cout << "REMAP" << std::endl;
       displaced_node = get_node(displaced_dfi); // could still be null if last nodeh
     }
-    std::cout << "parent dfi: " << parent->dnode->dfi() << std::endl;
-    std::cout << "displaced dfi: " << displaced_dfi << std::endl;
-    //assert(displaced_dfi >= parent->dnode->dfi());
     if(displaced_dfi == size)
       assert(displaced_node == NULL);
     else if(displaced_node != NULL)
@@ -61,9 +71,7 @@ namespace DFI {
     d->type_mod = latest_type_mod(type);
     d->dfilter = this;
     d->base_index = displaced_dfi;
-    std::cout << "new node will have base index: " << displaced_dfi << std::endl;
     d->tnode = node;
-    std::cout << "displaced_dfi: " << displaced_dfi << std::endl;
     if(displaced_node == NULL) {
       assert(displaced_dfi == size);
       // node will become the last node in tree
@@ -72,7 +80,6 @@ namespace DFI {
       d->cached_successor_dfi = size + 1;
       d->pnode = pavl_probe_node(tbl, d);
       d->type_pnode = pavl_probe_node(acquire_type_table(type), d);
-      std::cout << "type A" << std::endl;
     } else {
       // a node will be displaced so the new node can be inserted
       // find closest type node
@@ -81,28 +88,8 @@ namespace DFI {
       if(closest_type_node != NULL)
         d->type_base_index = closest_type_node->dnode->type_dfi();
 
-      // propagate changes and set up avl nodes
-      std::cout << "type B" << std::endl;
-      std::cout << "pre propagation displaced node dfi: " << displaced_node->dnode->dfi() << std::endl;
+      // propagate dfi changes up the tree
       propagate_dfi_change(displaced_node->dnode, +1);
-      std::cout << "post propagation displaced node dfi: " << displaced_node->dnode->dfi() << std::endl;
-    }
-    //if(displaced_dfi >= d->base_index - 1)
-      //d->base_index = displaced_dfi;
-
-    if(displaced_node != NULL) {
-      if(d->base_index == displaced_node->dnode->dfi() + 1) {
-        std::cout << "CAUGHT SWAP" << std::endl;
-        int tmp = d->base_index;
-        d->base_index = displaced_node->dnode->base_index;
-        displaced_node->dnode->base_index = tmp;
-      } else if(d->base_index + 1 != displaced_node->dnode->dfi()) {
-        std::cout << "CAUGHT" << std::endl;
-        std::cout << "     new node dfi:" << d->base_index << std::endl;
-        std::cout << "displaced node dfi: " << displaced_node->dnode->base_index << std::endl;
-        std::cout << "orig displaced_dfi: " << displaced_dfi << std::endl;
-        //d->base_index = displaced_dfi;
-      }
     }
 
     // modify TNode tree accordingly
@@ -120,9 +107,6 @@ namespace DFI {
       parent->children.push_back(node);
     }
     size++;
-
-    //d->dfi();
-    //d->type_dfi();
 
     assert(node->parent == parent);
     assert(parent == NULL || parent->children[position] == node);
@@ -143,9 +127,6 @@ namespace DFI {
       d->cached_successor_dfi = d->cached_successor->dfi();
     }
 
-    std::cout << "final dfi: " << d->dfi() << std::endl;
-    if(displaced_node != NULL)
-      std::cout<< "displaced final dfi: " << displaced_node->dnode->dfi() << std::endl;
     assert(d->pnode != NULL);
     assert(d->type_pnode != NULL);
     assert(d->type_base_index >= 0 && d->type_base_index <= num_nodes_of_type(type));
@@ -153,7 +134,39 @@ namespace DFI {
     return node;
   }
 
-  // O(log(n))
+  // O(log(n_t))
+  // modified AVL search that finds either the lowest node of type type
+  // greater than dfi or the highest node of type type less than dfi depending
+  // on whether gth (greater than) is true or false
+  DNode *DFilter::get_bound_node(int dfi, int type, bool gth) {
+    DNode *node = type_avl_root(type);
+    if(node == NULL)
+      return NULL;
+    DNode *validA = NULL;
+    DNode *validB = NULL;
+    int node_dfi = -1;
+    while(node != NULL) {
+      node_dfi = node->dfi();
+      if((gth && node_dfi >= dfi) || (!gth && node_dfi <= dfi)) {
+        validB = validA;
+        validA = node;
+      }
+      if(dfi < node_dfi)
+        node = node->type_avl_lhs();
+      else if(dfi > node_dfi)
+        node = node->type_avl_rhs();
+      else
+        break;
+    }
+    if(validA != NULL) {
+      return validA;
+    }
+    if(validB != NULL)
+      return validB;
+    return NULL;
+  }
+
+  // O(log(n_type))
   TNode *DFilter::get_closest_node(int dfi, int type) {
     DNode stub;
     stub.base_index = dfi;
@@ -224,7 +237,6 @@ namespace DFI {
   // T = number of nodes between this node and root
   // in practice, will touch nodes on the way to the root until
   // an up-to-date node is encountered
-  bool propagate = true;
   int DNode::dfi() {
     assert(this != NULL);
     if(dfilter == NULL)
@@ -242,16 +254,6 @@ namespace DFI {
     if(parent() != NULL)
       cached_parent_dfi = parent()->base_index;
     assert(base_mod == dfilter->latest_mod);
-    /*
-    if(propagate) {
-      propagate = false;
-      //int successor_dfi = postorder_successor_dfi();
-      if(base_index != cached_successor_dfi - 1) {
-        base_index = cached_successor_dfi - 1;
-        std::cout << "." << std::endl;
-      }
-      propagate = true;
-    }*/
     return base_index;
   }
 
@@ -604,9 +606,7 @@ namespace DFI {
     int current_index = -1;
     std::unordered_map<DNode*, int> reverse_smap;
     std::unordered_map<int, DNode*> node_map;
-    propagate = false;
     generate_index_helper(this, root, &current_index, &reverse_smap, &node_map);
-    propagate = true;
     for(auto kv : reverse_smap) {
       DNode *node = kv.first;
       int successor_index = kv.second;
@@ -626,8 +626,12 @@ namespace DFI {
     return node == NULL || node->status == NODE_DELETED;
   }
 
+  DResult::DResult() {}
+
   DResult::DResult(DNode *first, DNode *last, int type) {
     if(first != NULL) {
+      if(last == NULL)
+        last = first;
       assert(first->dfilter != NULL);
       assert(first->dfilter == last->dfilter);
       assert(type == -1 || first->dfilter->type_tables.find(type) != first->dfilter->type_tables.end());
@@ -638,7 +642,7 @@ namespace DFI {
       first->type_dfi();
       last->dfi();
       last->type_dfi();
-      assert(first->dfi() <= last->dfi());
+      //assert(first->dfi() <= last->dfi());
       // init
       this->first = first;
       this->last = last;

@@ -1,6 +1,7 @@
 #include <iostream>
 #include "dfilter.hpp"
 #include "assert.h"
+#include "math.h"
 #include <stdlib.h>
 #include <queue>
 #include <math.h>
@@ -10,7 +11,10 @@
 #include <unordered_map>
 #include <random>
 #include <algorithm>
+#include <chrono>
 std::random_device rd;
+
+using namespace std::chrono;
 
 #define ASIZE(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -91,6 +95,40 @@ void tnode_to_dot_no_names_with_successor_links(TNode *root, std::string path) {
     }
     for(TNode *child : cur->children) {
       std::string child_name = "\"" + itos(child->dnode->dfi()) + " (" + itos(child->type) + ")\"";
+      file << "  " << parent_name << " -> " << child_name << ";\n";
+      q.push(child);
+    }
+  }
+  file << "}\n";
+  file.close();
+}
+
+void type_avl_to_dot_no_names(TNode *root, int type, std::string path) {
+  std::ofstream file;
+  file.open(path);
+  file << "digraph {\n";
+  std::queue<TNode*> q;
+  assert(root->dnode->dfilter->type_avl_root(type) != NULL);
+  q.push(root->dnode->dfilter->type_avl_root(type)->tnode);
+  while(!q.empty()) {
+    TNode *cur = q.front();
+    q.pop();
+    std::string parent_name = "\"" + itos(cur->dnode->type_dfi()) + " (" + itos(cur->dnode->dfi()) + ")\"";
+    TNode *childA = NULL;
+    TNode *childB = NULL;
+    if(cur->dnode->type_pnode->pavl_link[0] != NULL)
+      childA = pavl_dnode(cur->dnode->type_pnode->pavl_link[0])->tnode;
+      if(cur->dnode->type_pnode->pavl_link[1] != NULL)
+        childB = pavl_dnode(cur->dnode->type_pnode->pavl_link[1])->tnode;
+    if(childA != NULL) {
+      TNode *child = childA;
+      std::string child_name = "\"" + itos(child->dnode->type_dfi()) + " (" + itos(child->dnode->dfi()) + ")\"";
+      file << "  " << parent_name << " -> " << child_name << ";\n";
+      q.push(child);
+    }
+    if(childB != NULL) {
+      TNode *child = childB;
+      std::string child_name = "\"" + itos(child->dnode->type_dfi()) + " (" + itos(child->dnode->dfi()) + ")\"";
       file << "  " << parent_name << " -> " << child_name << ";\n";
       q.push(child);
     }
@@ -232,7 +270,7 @@ void test_index_generation() {
   std::cout << std::endl;
   std::cout << "testing index generation..." << std::endl;
   std::cout << std::endl;
-  std::vector<int> sizes = {1, 2, 3, 10, 20, 40, 80, 200, 400, 800, 1000, 2000, 20000, 100000};
+  std::vector<int> sizes = {1, 2, 3, 10, 20, 40, 80, 200, 400, 800, 1000, 2000, 20000, 100000, 1000000};
   for(int size : sizes) {
     TNode *root = generate_realistic_tree(size, 20);
     std::cout << "  " << size << " nodes... " << std::flush;
@@ -277,6 +315,59 @@ void test_index_generation() {
     TNode::delete_tree(root);
     std::cout << "[OK]" << std::endl;
   }
+}
+
+void test_insertion_stability() {
+  std::cout << std::endl;
+  std::cout << "testing insertion stability (slow)..." << std::flush;
+  std::string type_names[] = {"A", "B", "C", "D", "E"};
+  int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
+  int num_nodes = 1;
+  TNode *rootA = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
+  DFilter filter = DFilter(rootA);
+  for(int i = 0; i < 8000; i++) {
+    int dfi = rand_int(0, filter.size - 1);
+    TNode *node = filter.get_node(dfi);
+    assert(node != NULL);
+    int insertion_index = rand_int(0, node->children.size());
+    TNode *result = filter.insert(node, insertion_index, i);
+    assert(result != NULL);
+    int verify_dfi = result->dnode->dfi();
+    TNode *verify = filter.get_node(verify_dfi);
+    assert(verify != NULL);
+    assert(verify == result);
+    // verify no duplicate nodes
+    std::unordered_set<int> used_dfis;
+    bool found_violation = false;
+    int current_dfi = -1;
+    std::stack<TNode*> s;
+    s.push(rootA);
+    while(!s.empty()) {
+      current_dfi++;
+      TNode *node = s.top();
+      s.pop();
+      for(int c = node->children.size() - 1; c >= 0; c--) {
+        // have to move RTL to get correct results with stack-based dfs
+        s.push(node->children[c]);
+      }
+      int dfi = node->dnode->dfi();
+      if(used_dfis.find(dfi) != used_dfis.end()) {
+        std::cout << "VIOLATION: " << dfi << std::endl;
+        found_violation = true;
+      }
+      if(dfi != current_dfi) {
+        std::cout << "INCORRECT OR MISSING DFI" << std::endl;
+        exit(0);
+      }
+      assert(dfi == current_dfi);
+      assert(used_dfis.find(node->dnode->dfi()) == used_dfis.end());
+      used_dfis.insert(dfi);
+    }
+    if(found_violation)
+      exit(0);
+  }
+  TNode::delete_tree(rootA);
+  std::cout << " [OK]" << std::endl;
 }
 
 void test_result_iteration() {
@@ -340,75 +431,77 @@ void test_result_iteration() {
   }
 }
 
+struct naive_result {
+  DResult res;
+  int count;
+};
+
+struct naive_result get_descendants_by_type_naive(TNode *node, int type) {
+  // traverse descendants of node taking note of all descendants of type
+  int count = 0;
+  std::stack<TNode*> s;
+  s.push(node);
+  DNode *first = NULL;
+  DNode *last = NULL;
+  while(!s.empty()) {
+    TNode *cur = s.top();
+    s.pop();
+    if(cur->type == type && node != cur) {
+      count++;
+      if(first == NULL) {
+        first = cur->dnode;
+      } else {
+        last = cur->dnode;
+      }
+    }
+    for(int c = cur->children.size() - 1; c >= 0; c--) {
+      TNode *child = cur->children[c];
+      s.push(child);
+    }
+  }
+  struct naive_result result;
+  result.res = DResult(first, last, type);
+  result.count = count;
+  return result;
+}
+
+void test_get_descendants_by_type() {
+  std::cout << "testing get descendants by type... " << std::flush;
+  int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5, 8};
+  int num_types = 8;
+  int num_nodes = 10000;
+  TNode *root = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), num_types);
+  DFilter filter = DFilter(root);
+  for(int i = 0; i < filter.size; i++) {
+    for(int type = 0; type < num_types; type++) {
+      TNode *node = filter.get_node(i);
+      struct naive_result naive_res = get_descendants_by_type_naive(node, type);
+      DResult res = filter.get_descendants_by_type(node, type);
+      assert(res.size() == naive_res.count);
+      assert(res.first == naive_res.res.first);
+      assert(res.last == naive_res.res.last);
+    }
+  }
+  std::cout << "[OK]" << std::endl;
+}
+
+void print_tree(TNode *root, int type) { // used to generate the slide images
+  tnode_to_dot_no_names_with_successor_links(root, "bin/tnode_tree.dot");
+  avl_to_dot_no_names(root, "bin/avl_tree.dot");
+  type_avl_to_dot_no_names(root, type, "bin/type_avl_tree.dot");
+}
+
 int main() {
   std::cout << "test suite started" << std::endl;
   test_generate_random_tree();
   test_index_generation();
   test_result_iteration();
-  //std::cout << "generating random tree" << std::endl;
-  std::string type_names[] = {"A", "B", "C", "D", "E"};
-  int branch_dist[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 5};
-
-  int num_nodes = 10;
-  TNode *rootA = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), ASIZE(type_names));
-  std::cout << "generating index..." << std::endl;
-  DFilter filter = DFilter(rootA);
-  for(int i = 0; i < 5000; i++) {
-    std::cout << "i: " << i << std::endl;
-    int dfi = rand_int(0, filter.size - 1);
-    std::cout << "getting node with dfi: " << dfi << std::endl;
-    TNode *node = filter.get_node(dfi);
-    assert(node != NULL);
-    std::cout << "selected parent node dfi: " << node->dnode->dfi() << std::endl;
-    int insertion_index = rand_int(0, node->children.size());
-    tnode_to_dot_no_names(rootA, "bin/before_insert.dot");
-    avl_to_dot_no_names(rootA, "bin/avl_before_insert.dot");
-    TNode *result = filter.insert(node, insertion_index, i);
-    avl_to_dot_no_names(rootA, "bin/avl_after_insert.dot");
-    tnode_to_dot_no_names(rootA, "bin/after_insert.dot");
-    assert(result != NULL);
-    int verify_dfi = result->dnode->dfi();
-    std::cout << "attempting to verify via dfi: " << verify_dfi << std::endl;
-    TNode *verify = filter.get_node(verify_dfi);
-    assert(verify != NULL);
-    std::cout << "verify dfi again: " << result->dnode->dfi() << std::endl;
-    assert(verify == result);
-    // verify no duplicate nodes
-
-    std::unordered_set<int> used_dfis;
-    bool found_violation = false;
-    int current_dfi = -1;
-    std::stack<TNode*> s;
-    s.push(rootA);
-    while(!s.empty()) {
-      current_dfi++;
-      TNode *node = s.top();
-      s.pop();
-      for(int c = node->children.size() - 1; c >= 0; c--) {
-        // have to move RTL to get correct results with stack-based dfs
-        s.push(node->children[c]);
-      }
-      int dfi = node->dnode->dfi();
-      if(used_dfis.find(dfi) != used_dfis.end()) {
-        std::cout << "VIOLATION: " << dfi << std::endl;
-        found_violation = true;
-      }
-      std::cout << "      node DFI: " << dfi << " " << node->type << std::endl;
-      std::cout << "  expected DFI: " << current_dfi << std::endl;
-      if(dfi != current_dfi) {
-        std::cout << "INCORRECT OR MISSING DFI" << std::endl;
-        exit(0);
-      }
-      //assert(dfi == current_dfi);
-      //assert(used_dfis.find(node->dnode->dfi()) == used_dfis.end());
-      used_dfis.insert(dfi);
-    }
-    if(found_violation)
-      exit(0);
-  }
-  TNode::delete_tree(rootA);
+  test_insertion_stability();
+  test_get_descendants_by_type();
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "test suite finished." << std::endl;
+  std::cout << std::endl;
+  std::cout << "benchmark suite started" << std::endl;
   std::cout << std::endl;
 }
