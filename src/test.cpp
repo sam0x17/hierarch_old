@@ -514,6 +514,71 @@ void benchmark_insertion() {
   std::cout << std::endl;
 }
 
+void benchmark_get_descendants_by_type() {
+  std::cout << std::endl;
+  std::cout << "benchmarking get descendants by type..." << std::endl;
+  std::cout << "DFilter\t\t\t\tNaive" << std::endl;
+  std::cout << "nodes\tavg query time (microseconds)\t\tnodes\tavg query time (microseconds)" << std::endl;
+  int branch_dist[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 6, 6, 7, 8};
+  int num_types = 35;
+  for(int num_nodes = 1000; num_nodes <= 100000; num_nodes += 1000) {
+    TNode *root = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), num_types);
+    DFilter filter = DFilter(root);
+    std::vector<TNode*> nodes;
+    for(int dfi = 0; dfi < num_nodes; dfi++) {
+      TNode *node = filter.get_node(dfi);
+      if(node->children.size() == 0 || node->dnode->postorder_successor_dfi() - node->dnode->dfi() > 20)
+        nodes.push_back(filter.get_node(dfi));
+    }
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    for(TNode *node : nodes) {
+      for(int type = 0; type < num_types; type++)
+        DResult result = filter.get_descendants_by_type(node, type);
+    }
+    auto duration = duration_cast<microseconds>(high_resolution_clock::now() - t1).count();
+    int dfilter_duration = (int)duration;
+    t1 = high_resolution_clock::now();
+    for(TNode *node : nodes) {
+      for(int type = 0; type < num_types; type++) {
+        get_descendants_by_type_naive(node, type);
+      }
+    }
+    duration = duration_cast<microseconds>(high_resolution_clock::now() - t1).count();
+    int naive_duration = (int)duration;
+    std::cout << num_nodes << "\t" << dfilter_duration/(double)num_types/(double)nodes.size() << "\t\t" << num_nodes << "\t" << naive_duration/(double)num_types/(double)nodes.size() << std::endl;
+  }
+  std::cout << std::endl;
+}
+
+void benchmark_get_descendants_by_type_root() {
+  std::cout << std::endl;
+  std::cout << "benchmarking get descendants by type (from root node)..." << std::endl;
+  std::cout << "DFilter\t\t\t\tNaive" << std::endl;
+  std::cout << "nodes\tavg query time(ms)\t\tnodes\tavg query time(microseconds)" << std::endl;
+  int branch_dist[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7, 8};
+  int num_types = 35;
+  for(int num_nodes = 1000; num_nodes <= 100000; num_nodes += 1000) {
+    TNode *root = generate_random_tree(num_nodes, branch_dist, ASIZE(branch_dist), num_types);
+    DFilter filter = DFilter(root);
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    for(int i = 0; i < 100; i++) {
+      for(int type = 0; type < num_types; type++)
+        DResult result = filter.get_descendants_by_type(root, type);
+    }
+    auto duration = duration_cast<microseconds>(high_resolution_clock::now() - t1).count();
+    int dfilter_duration = (int)duration;
+    t1 = high_resolution_clock::now();
+    for(int i = 0; i < 100; i++) {
+      for(int type = 0; type < num_types; type++)
+        get_descendants_by_type_naive(root, type);
+    }
+    duration = duration_cast<microseconds>(high_resolution_clock::now() - t1).count();
+    int naive_duration = (int)duration;
+    std::cout << num_nodes << "\t" << dfilter_duration/(double)100.0/(double)num_types << "\t\t" << num_nodes << "\t" << naive_duration/(double)100.0/(double)num_types << std::endl;
+  }
+  std::cout << std::endl;
+}
+
 int main() {
   std::cout << "test suite started" << std::endl;
   test_generate_random_tree();
@@ -525,6 +590,9 @@ int main() {
   std::cout << "test suite finished." << std::endl;
   std::cout << std::endl;
   std::cout << "benchmark suite started" << std::endl;
+  benchmark_get_descendants_by_type();
+  benchmark_get_descendants_by_type_root();
   benchmark_insertion();
+  std::cout << "benchmark suite finished." << std::endl;
   std::cout << std::endl;
 }
