@@ -366,7 +366,6 @@ void test_insertion_stability() {
     if(found_violation)
       exit(0);
   }
-  //TNode::delete_tree(rootA);
   std::cout << " [OK]" << std::endl;
 }
 
@@ -491,6 +490,30 @@ void print_tree(TNode *root, int type) { // used to generate the slide images
   type_avl_to_dot_no_names(root, type, "bin/type_avl_tree.dot");
 }
 
+void benchmark_insertion() {
+  std::cout << std::endl;
+  std::cout << "benchmarking insertion..." << std::endl;
+  std::cout << "num_insertions\ttime(ms)" << std::endl;
+  int branch_dist[] = {1};
+  int num_types = 35;
+  for(int num_nodes = 1000; num_nodes <= 100000; num_nodes += 1000) {
+    TNode *root = generate_random_tree(1, branch_dist, ASIZE(branch_dist), num_types);
+    DFilter filter = DFilter(root);
+    std::vector<TNode*> nodes;
+    nodes.push_back(root);
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    for(int dfi = 0; dfi < num_nodes; dfi++) {
+      TNode *node = nodes[dfi];
+      int insertion_index = rand_int(0, node->children.size());
+      TNode *result = filter.insert(node, insertion_index, rand_int(0, num_types - 1));
+      nodes.push_back(result);
+    }
+    auto duration = duration_cast<milliseconds>(high_resolution_clock::now() - t1).count();
+    std::cout << num_nodes << "\t" << duration << std::endl;
+  }
+  std::cout << std::endl;
+}
+
 int main() {
   std::cout << "test suite started" << std::endl;
   test_generate_random_tree();
@@ -502,5 +525,6 @@ int main() {
   std::cout << "test suite finished." << std::endl;
   std::cout << std::endl;
   std::cout << "benchmark suite started" << std::endl;
+  benchmark_insertion();
   std::cout << std::endl;
 }
