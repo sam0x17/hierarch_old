@@ -12,6 +12,8 @@ namespace DFI {
       return DResult(NULL, NULL, type);
     int start_dfi = node->dnode->dfi();
     int end_dfi = node->dnode->postorder_successor_dfi();
+    if(start_dfi >= last_dfi_of_type(type) || end_dfi <= first_dfi_of_type(type))
+      return DResult(NULL, NULL, type);
     DNode *start_node = get_bound_node(start_dfi + 1, type, true);
     if(start_node == NULL)
       return DResult(NULL, NULL, type);
@@ -275,6 +277,11 @@ namespace DFI {
       } else {
         type_mod = dfilter->latest_type_mod(tnode->type);
       }
+      // update type bound pointers
+      if(type_base_index == dfilter->num_nodes_of_type(tnode->type) - 1)
+        dfilter->max_type_bounds[tnode->type] = this;
+      if(type_base_index == 0)
+        dfilter->min_type_bounds[tnode->type] = this;
     }
     if(type_parent != NULL)
       cached_type_parent_dfi = type_parent->type_base_index;
@@ -479,6 +486,32 @@ namespace DFI {
     return pavl_dnode(type_pnode->pavl_link[0]);
   }
 
+  DNode *DFilter::first_node_of_type(int type) {
+    if(min_type_bounds.find(type) == min_type_bounds.end())
+      return NULL;
+    return min_type_bounds[type];
+  }
+
+  DNode *DFilter::last_node_of_type(int type) {
+    if(max_type_bounds.find(type) == max_type_bounds.end())
+      return NULL;
+    return max_type_bounds[type];
+  }
+
+  int DFilter::first_dfi_of_type(int type) {
+    DNode *node = first_node_of_type(type);
+    if(node == NULL)
+      return -1;
+    return node->dfi();
+  }
+
+  int DFilter::last_dfi_of_type(int type) {
+    DNode *node = last_node_of_type(type);
+    if(node == NULL)
+      return -1;
+    return node->dfi();
+  }
+
   bool DNode::pnode_is_rhs() {
     assert(pnode != NULL);
     assert(pnode->pavl_parent != NULL);
@@ -592,6 +625,10 @@ namespace DFI {
     int base_index = (*current_index);
     int type_base_index = dfilter->num_nodes_of_type(node->type);
     dfilter->assign_dnode(node, *current_index, type_base_index);
+    if(node->dnode->type_base_index == dfilter->num_nodes_of_type(node->type) - 1)
+      dfilter->max_type_bounds[node->type] = node->dnode;
+    if(node->dnode->type_base_index == 0)
+      dfilter->min_type_bounds[node->type] = node->dnode;
     int last_index = base_index;
     for(TNode *child : node->children)
       last_index = generate_index_helper(dfilter, child, current_index, reverse_smap, node_map);
@@ -600,6 +637,8 @@ namespace DFI {
     (*node_map)[base_index] = node->dnode;
     return last_index;
   }
+
+  // O(n)
   void DFilter::generate_index(TNode *root) {
     latest_mod = 0;
     size = 0;

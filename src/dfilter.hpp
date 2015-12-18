@@ -82,6 +82,8 @@ namespace DFI {
     int size;
     struct pavl_table *tbl = NULL;
     std::unordered_map<int, struct pavl_table*> type_tables;
+    std::unordered_map<int, DNode*> max_type_bounds;
+    std::unordered_map<int, DNode*> min_type_bounds;
     std::unordered_map<int, int> latest_type_mods;
     //TODO: destructor (can call delete_tree) but must delete type_tables, etc
 
@@ -99,6 +101,10 @@ namespace DFI {
     TNode *get_node(int dfi);
     TNode *get_closest_node(int dfi, int type);
     DNode *get_bound_node(int dfi, int type, bool gth);
+    DNode *first_node_of_type(int type);
+    DNode *last_node_of_type(int type);
+    int first_dfi_of_type(int type);
+    int last_dfi_of_type(int type);
 
     // returns an DResult iterator (has iterator + count) containing
     // all nodes of the specified type that are descendants of the
@@ -123,12 +129,12 @@ namespace DFI {
   };
 
   class DResult {
-  public:
     int type;
     int base_mod;
     int type_mod;
     bool first_run = true;
     DFilter *dfilter = NULL;
+  public:
     DNode *first = NULL;
     DNode *last = NULL;
     DNode *node = NULL;
