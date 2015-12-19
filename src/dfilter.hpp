@@ -85,7 +85,6 @@ namespace DFI {
     std::unordered_map<int, DNode*> max_type_bounds;
     std::unordered_map<int, DNode*> min_type_bounds;
     std::unordered_map<int, int> latest_type_mods;
-    //TODO: destructor (can call delete_tree) but must delete type_tables, etc
 
     DFilter();
     DFilter(TNode *root);

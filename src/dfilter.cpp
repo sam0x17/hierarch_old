@@ -1,7 +1,7 @@
 #include "dfilter.hpp"
 namespace DFI {
 
-  // user-facing methods (the whole point of this library):
+  // user-facing methods (the whole point of this library!):
 
   // returns an DResult iterator (has iterator + count) containing
   // all nodes of the specified type that are descendants of the
@@ -316,6 +316,7 @@ namespace DFI {
     return type_base_index;
   }
 
+  // propagates DFI changes up the tree to the root
   void DFilter::propagate_dfi_change(DNode *node, int delta) {
     assert(node != NULL);
     int type = node->tnode->type;
