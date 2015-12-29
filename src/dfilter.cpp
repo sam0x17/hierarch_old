@@ -3,10 +3,11 @@ namespace DFI {
 
   // user-facing methods (the whole point of this library!):
 
-  // returns an DResult iterator (has iterator + count) containing
+  // returns a DResult iterator (has iterator + count) containing
   // all nodes of the specified type that are descendants of the
   // specified node
   // complexity: O(log(n_t))
+  // where n_t is the number of nodes of type t in the tree
   DResult DFilter::get_descendants_by_type(TNode *node, int type) {
     if(node->children.size() == 0)
       return DResult(NULL, NULL, type);
@@ -70,7 +71,7 @@ namespace DFI {
       }
     }
     if(displaced_node == NULL) {
-      displaced_node = get_node(displaced_dfi); // could still be null if last nodeh
+      displaced_node = get_node(displaced_dfi); // could still be null if last node
     }
     if(displaced_dfi == size)
       assert(displaced_node == NULL);
@@ -110,9 +111,9 @@ namespace DFI {
       node->add_child(troot);
       troot = node;
     } else if(parent->children.size() > 0) { // parent has children
-      if(position == parent->children.size()) {
+      if(position == parent->children.size()) { // node will be last child
         parent->children.push_back(node);
-      } else {
+      } else { // node will be interior child
         parent->children.reserve(parent->children.size() + 1);
         parent->children.insert(parent->children.begin() + position, node);
       }
@@ -132,8 +133,9 @@ namespace DFI {
     if(type_parent != NULL)
       d->cached_type_parent_dfi = type_parent->type_dfi();
 
+    // assign pnodes (might be able to optimize with cursor + rebalance method)
     d->pnode = pavl_probe_node(tbl, d);
-    d->type_pnode = pavl_probe_node(acquire_type_table(type), d); // could be optimized
+    d->type_pnode = pavl_probe_node(acquire_type_table(type), d);
 
     if(displaced_node != NULL) {
       d->cached_successor = displaced_node->dnode;
@@ -714,7 +716,7 @@ namespace DFI {
       first->type_dfi();
       last->dfi();
       last->type_dfi();
-      //assert(first->dfi() <= last->dfi());
+      assert(first->dfi() <= last->dfi());
       // init
       this->first = first;
       this->last = last;

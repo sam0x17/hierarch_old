@@ -70,11 +70,6 @@ namespace DFI {
     static void delete_tree(TNode *&root);
   };
 
-  struct backtrack_result {
-    TNode *node = NULL;
-    TNode *backtrack = NULL;
-  };
-
   class DFilter {
   public:
     TNode *troot = NULL;
@@ -106,10 +101,11 @@ namespace DFI {
     int first_dfi_of_type(int type);
     int last_dfi_of_type(int type);
 
-    // returns an DResult iterator (has iterator + count) containing
+    // returns a DResult iterator (has iterator + count) containing
     // all nodes of the specified type that are descendants of the
     // specified node
     // complexity: O(log(n_t))
+    // where n_t is the number of nodes of type t in the tree
     DResult get_descendants_by_type(TNode *node, int type);
 
     // insert a new tree node at the specified location and update
