@@ -74,6 +74,7 @@ GEM
       rspec-mocks (~> 3.5.0)
       rspec-support (~> 3.5.0)
     rspec-support (3.5.0)
+    ruby-terminfo (0.1.1)
     thor (0.19.1)
     thread_safe (0.3.5)
     tzinfo (1.2.2)
@@ -90,6 +91,7 @@ DEPENDENCIES
   rkelly-remix
   rspec (~> 3.0)
   rspec-rails
+  ruby-terminfo
 
 BUNDLED WITH
    1.13.6
