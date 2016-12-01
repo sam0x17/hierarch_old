@@ -1,5 +1,6 @@
 require 'empirical_study/version'
 require 'find'
+require 'rkelly'
 
 module EmpiricalStudy
   JS_DATA_DIR = './data/javascript_150k'
