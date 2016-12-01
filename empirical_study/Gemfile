@@ -2,9 +2,5 @@ source 'https://rubygems.org'
 
 # Specify your gem's dependencies in empirical_study.gemspec
 gem 'rspec-rails'
-#gem 'capybara'
-#gem 'poltergeist'
-#gem 'phantomjs'
-#gem 'launchy'
 
 gemspec
