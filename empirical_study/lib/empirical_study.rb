@@ -1,6 +1,7 @@
 require 'empirical_study/version'
 require 'find'
 require 'rkelly'
+require 'awesome_print'
 
 module EmpiricalStudy
   JS_DATA_DIR = './data/javascript_150k'
@@ -20,20 +21,9 @@ module EmpiricalStudy
     paths.each do |path|
       File.open(path, 'r') do |file|
         file.each_line do |line|
-
           puts line
           sleep 0.001
         end
-      end
-    end
-  end
-
-  def self.find_jquery_calls(str)
-    state = :scanning
-    str.chars.each do |c|
-      case state
-      when :scanning
-
       end
     end
   end
