@@ -8,8 +8,11 @@ require 'timeout'
 require 'set'
 
 module EmpiricalStudy
+  include RKelly::Nodes
   JS_DATA_DIR = './data/javascript_150k'
+  JQUERY_FUNC_NAMES = ['$', 'jQuery'].freeze
   PARSE_TIMEOUT = 15 # seconds
+  BAD_JQUERY_CHARS = [':', '[', ']'].freeze
 
   def self.parse_js_files
     unless Dir.exist? JS_DATA_DIR
@@ -48,6 +51,7 @@ module EmpiricalStudy
       elapsed = Time.now - start_time
       remaining = (elapsed / processed) * (paths.size - processed)
       # "#{(remaining / 60).floor} minutes #{(remaining - (remaining / 60).floor).round} seconds",
+=begin
       print_statistics({
         'time elapsed' => display_time(elapsed),
         'time remaining' => display_time(remaining),
@@ -61,6 +65,7 @@ module EmpiricalStudy
         'current file' => path.gsub(JS_DATA_DIR, '').rtruncate(TermInfo.screen_size.last - 26),
         'current file lines' => num_lines
       })
+=end
       begin
         Timeout::timeout(PARSE_TIMEOUT) { find_jquery_calls(source_code) }
       rescue NoMethodError, ArgumentError, RKelly::SyntaxError, RuntimeError, Timeout::Error
@@ -94,5 +99,26 @@ module EmpiricalStudy
 
   def self.find_jquery_calls(str, parser = RKelly::Parser.new)
     ast = parser.parse(str)
+    calls = []
+    ast.pointcut(FunctionCallNode).matches.each do |func_call|
+      next unless func_call.value && func_call.value.value && JQUERY_FUNC_NAMES.include?(func_call.value.value)
+      call = func_call.arguments.to_ecma
+      puts "false: #{call}" if !pure_gdbt_call?(call) && candidate?(str)
+      #puts " true: #{call}" if pure_gdbt_call?(call)
+    end
+    calls
+  end
+
+  def self.candidate?(str)
+    return false unless (str.start_with?("'") && str.end_with?("'")) ||
+                        (str.start_with?('"') && str.end_with?('"'))
+    true
+  end
+
+  def self.pure_gdbt_call?(str)
+    return false unless candidate?(str)
+    BAD_JQUERY_CHARS.each { |c| return false if str.include?(c) }
+    return false if str.include? ':'
+    !!(/\A([#.]{0,1}[a-z_-]\w*(\s+|\z)(<\s+|\z){0,1})+\z/i.match(str[1..-2]))
   end
 end
