@@ -32,11 +32,13 @@ module EmpiricalStudy
     total_lines = 0
     num_parse_errors = 0
     puts ""
-    11.times { puts "" }
+    13.times { puts "" }
     processed = 0
     blacklist = Set.new
     blacklist_hits = 0
     start_time = Time.now
+    positive_calls = 0
+    negative_calls = 0
     paths.each do |path|
       processed += 1
       source_code = nil
@@ -50,8 +52,7 @@ module EmpiricalStudy
       end
       elapsed = Time.now - start_time
       remaining = (elapsed / processed) * (paths.size - processed)
-      # "#{(remaining / 60).floor} minutes #{(remaining - (remaining / 60).floor).round} seconds",
-=begin
+      total_calls = negative_calls + positive_calls
       print_statistics({
         'time elapsed' => display_time(elapsed),
         'time remaining' => display_time(remaining),
@@ -63,11 +64,16 @@ module EmpiricalStudy
         'lines parsed' => total_lines,
         'avg lines' => safe_div(total_lines, parsed_files).round,
         'current file' => path.gsub(JS_DATA_DIR, '').rtruncate(TermInfo.screen_size.last - 26),
-        'current file lines' => num_lines
+        'current file lines' => num_lines,
+        'positive calls' => "#{positive_calls} (#{(safe_div(positive_calls, total_calls) * 100.0).round(3)})%",
+        'negative_calls' => "#{negative_calls} (#{(safe_div(negative_calls, total_calls) * 100.0).round(3)})%"
       })
-=end
       begin
-        Timeout::timeout(PARSE_TIMEOUT) { find_jquery_calls(source_code) }
+        Timeout::timeout(PARSE_TIMEOUT) do
+          calls = find_jquery_gdbt_calls(source_code)
+          positive_calls += calls[:positive]
+          negative_calls += calls[:negative]
+        end
       rescue NoMethodError, ArgumentError, RKelly::SyntaxError, RuntimeError, Timeout::Error
         num_parse_errors += 1
         blacklist.add sha1
@@ -97,28 +103,31 @@ module EmpiricalStudy
     "#{(seconds / 60).floor} minutes #{(seconds - (60 * (seconds / 60).floor)).round} seconds"
   end
 
-  def self.find_jquery_calls(str, parser = RKelly::Parser.new)
+  def self.find_jquery_gdbt_calls(str, parser = RKelly::Parser.new)
     ast = parser.parse(str)
-    calls = []
+    positive_calls = []
+    negative_calls = []
     ast.pointcut(FunctionCallNode).matches.each do |func_call|
       next unless func_call.value && func_call.value.value && JQUERY_FUNC_NAMES.include?(func_call.value.value)
       call = func_call.arguments.to_ecma
-      puts "false: #{call}" if !pure_gdbt_call?(call) && candidate?(str)
-      #puts " true: #{call}" if pure_gdbt_call?(call)
+      unless pure_gdbt_call? call
+        positive_calls << call
+      else
+        negative_calls << call
+      end
     end
-    calls
+    { positive: positive_calls.size, negative: negative_calls.size }
   end
 
-  def self.candidate?(str)
+  def self.enclosed_in_quotes?(str)
     return false unless (str.start_with?("'") && str.end_with?("'")) ||
                         (str.start_with?('"') && str.end_with?('"'))
     true
   end
 
   def self.pure_gdbt_call?(str)
-    return false unless candidate?(str)
+    return false unless enclosed_in_quotes? str
     BAD_JQUERY_CHARS.each { |c| return false if str.include?(c) }
-    return false if str.include? ':'
     !!(/\A([#.]{0,1}[a-z_-]\w*(\s+|\z)(<\s+|\z){0,1})+\z/i.match(str[1..-2]))
   end
 end
