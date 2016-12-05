@@ -10,7 +10,7 @@ require 'set'
 module EmpiricalStudy
   include RKelly::Nodes
   JS_DATA_DIR = './data/javascript_150k'
-  JQUERY_FUNC_NAMES = ['$', 'jQuery'].freeze
+  JQUERY_FUNC_NAMES = ['$', 'jQuery', 'find'].freeze
   PARSE_TIMEOUT = 30 # seconds
   BAD_JQUERY_CHARS = [':', '[', ']'].freeze # not allowed
   WHITELIST_JQUERY_CHARS = ['-', '_', '.'].freeze # allowed
@@ -79,7 +79,7 @@ module EmpiricalStudy
         'current file lines' => num_lines,
         'positive calls' => "#{positive_calls} (#{(safe_div(positive_calls, total_calls) * 100.0).round(3)})%",
         'negative_calls' => "#{negative_calls} (#{(safe_div(negative_calls, total_calls) * 100.0).round(3)})%",
-        'avg nesting level' => (total_tokens.to_f / parsed_files).round(3)
+        'avg nesting level' => (total_tokens.to_f / positive_calls).round(3)
       }) unless DEBUG
       begin
         Timeout::timeout(PARSE_TIMEOUT) do
@@ -150,6 +150,8 @@ module EmpiricalStudy
   end
 
   def self.pure_gdbt_call?(str)
+    str = str.gsub(',', ' ') # pre-whitelist comma
+    str = str.gsub('>', ' ') # pre-whitelist parent > child
     if str.include? '+' # handle concatenation case
       str = "'" + str.gsub('"', '').gsub("'", '').gsub(' + ', '').gsub('+', '') + "'"
       BAD_JQUERY_CHARS.each { |c| str = str.gsub(c, '') }
