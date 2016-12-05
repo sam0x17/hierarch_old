@@ -11,8 +11,11 @@ module EmpiricalStudy
   include RKelly::Nodes
   JS_DATA_DIR = './data/javascript_150k'
   JQUERY_FUNC_NAMES = ['$', 'jQuery'].freeze
-  PARSE_TIMEOUT = 15 # seconds
-  BAD_JQUERY_CHARS = [':', '[', ']'].freeze
+  PARSE_TIMEOUT = 30 # seconds
+  BAD_JQUERY_CHARS = [':', '[', ']'].freeze # not allowed
+  WHITELIST_JQUERY_CHARS = ['-', '_', '.'].freeze # allowed
+  DEBUG = false
+  UNIQUE_MODE = true
 
   def self.parse_js_files
     unless Dir.exist? JS_DATA_DIR
@@ -32,13 +35,16 @@ module EmpiricalStudy
     total_lines = 0
     num_parse_errors = 0
     puts ""
-    13.times { puts "" }
+    15.times { puts "" }
     processed = 0
     blacklist = Set.new
+    uniquelist = Set.new if UNIQUE_MODE
+    uniquelist_hits = 0 if UNIQUE_MODE
     blacklist_hits = 0
     start_time = Time.now
     positive_calls = 0
     negative_calls = 0
+    total_tokens = 0
     paths.each do |path|
       processed += 1
       source_code = nil
@@ -50,6 +56,11 @@ module EmpiricalStudy
         blacklist_hits += 1
         next
       end
+      if UNIQUE_MODE && uniquelist.include?(sha1)
+        uniquelist_hits += 1
+        next
+      end
+      uniquelist.add(sha1) if UNIQUE_MODE
       elapsed = Time.now - start_time
       remaining = (elapsed / processed) * (paths.size - processed)
       total_calls = negative_calls + positive_calls
@@ -61,18 +72,26 @@ module EmpiricalStudy
         'parse errors' => num_parse_errors,
         'percent parse errors' => "#{(safe_div(num_parse_errors, paths.size) * 100.0).round(3)}%",
         'blacklist hits' => blacklist_hits,
+        'uniquelist hits' => uniquelist_hits,
         'lines parsed' => total_lines,
         'avg lines' => safe_div(total_lines, parsed_files).round,
         'current file' => path.gsub(JS_DATA_DIR, '').rtruncate(TermInfo.screen_size.last - 26),
         'current file lines' => num_lines,
         'positive calls' => "#{positive_calls} (#{(safe_div(positive_calls, total_calls) * 100.0).round(3)})%",
-        'negative_calls' => "#{negative_calls} (#{(safe_div(negative_calls, total_calls) * 100.0).round(3)})%"
-      })
+        'negative_calls' => "#{negative_calls} (#{(safe_div(negative_calls, total_calls) * 100.0).round(3)})%",
+        'avg nesting level' => (total_tokens.to_f / parsed_files).round(3)
+      }) unless DEBUG
       begin
         Timeout::timeout(PARSE_TIMEOUT) do
-          calls = find_jquery_gdbt_calls(source_code)
-          positive_calls += calls[:positive]
-          negative_calls += calls[:negative]
+          has_func_calls = false
+          JQUERY_FUNC_NAMES.each { |name| has_func_calls = has_func_calls || source_code.downcase.include?(name.downcase) }
+          # optimization: dont bother parsing if there are no jquery calls
+          if has_func_calls
+            calls = find_jquery_gdbt_calls(source_code)
+            calls[:positive].each { |call| total_tokens += call.split(' ').size }
+            positive_calls += calls[:positive].size
+            negative_calls += calls[:negative].size
+          end
         end
       rescue NoMethodError, ArgumentError, RKelly::SyntaxError, RuntimeError, Timeout::Error
         num_parse_errors += 1
@@ -110,13 +129,18 @@ module EmpiricalStudy
     ast.pointcut(FunctionCallNode).matches.each do |func_call|
       next unless func_call.value && func_call.value.value && JQUERY_FUNC_NAMES.include?(func_call.value.value)
       call = func_call.arguments.to_ecma
-      unless pure_gdbt_call? call
+      puts "skip: #{call}" unless call.include?("'") || call.include?('"') if DEBUG
+      next unless call.include?("'") || call.include?('"')
+      # ^ ignore encapsulation calls like $(elem), as these aren't real DOM queries
+      if pure_gdbt_call? call
+        puts "good: #{call}" if DEBUG
         positive_calls << call
       else
+        puts " bad: #{call}" if DEBUG
         negative_calls << call
       end
     end
-    { positive: positive_calls.size, negative: negative_calls.size }
+    { positive: positive_calls, negative: negative_calls }
   end
 
   def self.enclosed_in_quotes?(str)
@@ -126,8 +150,13 @@ module EmpiricalStudy
   end
 
   def self.pure_gdbt_call?(str)
+    if str.include? '+' # handle concatenation case
+      str = "'" + str.gsub('"', '').gsub("'", '').gsub(' + ', '').gsub('+', '') + "'"
+      BAD_JQUERY_CHARS.each { |c| str = str.gsub(c, '') }
+    end
     return false unless enclosed_in_quotes? str
     BAD_JQUERY_CHARS.each { |c| return false if str.include?(c) }
-    !!(/\A([#.]{0,1}[a-z_-]\w*(\s+|\z)(<\s+|\z){0,1})+\z/i.match(str[1..-2]))
+    WHITELIST_JQUERY_CHARS.each { |c| str = str.gsub(c, '') }
+    !!(/\A([#.]{0,1}[a-z]\w*(\s+|\z)(<\s+|\z){0,1})+\z/i.match(str[1..-2]))
   end
 end
