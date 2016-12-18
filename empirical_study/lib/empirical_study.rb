@@ -1,4 +1,5 @@
 require 'empirical_study/version'
+require 'stats_finder'
 require 'find'
 require 'rkelly'
 require 'awesome_print'
@@ -35,7 +36,7 @@ module EmpiricalStudy
     total_lines = 0
     num_parse_errors = 0
     puts ""
-    15.times { puts "" }
+    16.times { puts "" }
     processed = 0
     blacklist = Set.new
     uniquelist = Set.new if UNIQUE_MODE
@@ -45,6 +46,11 @@ module EmpiricalStudy
     positive_calls = 0
     negative_calls = 0
     total_tokens = 0
+    files_with_jquery_calls = 0
+    $gdbt_queries_per_positive = StatsFinder.new
+    $gdbt_queries_per_file = StatsFinder.new
+    $pure_calls_per_file = StatsFinder.new
+    $jquery_calls_per_file = StatsFinder.new
     paths.each do |path|
       processed += 1
       source_code = nil
@@ -78,7 +84,8 @@ module EmpiricalStudy
         'current file lines' => num_lines,
         'positive calls' => "#{positive_calls} (#{(safe_div(positive_calls, total_calls) * 100.0).round(3)})%",
         'negative_calls' => "#{negative_calls} (#{(safe_div(negative_calls, total_calls) * 100.0).round(3)})%",
-        'avg nesting level' => (total_tokens.to_f / positive_calls).round(3)
+        'avg nesting level' => (total_tokens.to_f / positive_calls).round(3),
+        'jquery calls per file' => $jquery_calls_per_file.average
       }) unless DEBUG
       begin
         Timeout::timeout(PARSE_TIMEOUT) do
@@ -86,10 +93,24 @@ module EmpiricalStudy
           JQUERY_FUNC_NAMES.each { |name| has_func_calls = has_func_calls || source_code.downcase.include?(name.downcase) }
           # optimization: dont bother parsing if there are no jquery calls
           if has_func_calls
+            files_with_jquery_calls += 1
             calls = find_jquery_gdbt_calls(source_code)
-            calls[:positive].each { |call| total_tokens += call.split(' ').size }
+            file_tokens = 0
+            calls[:positive].each do |call|
+              num_tokens = call.split(' ').size
+              total_tokens += num_tokens
+              file_tokens += num_tokens
+              $gdbt_queries_per_positive.observe_value(num_tokens)
+            end
+            $gdbt_queries_per_file.observe_value(file_tokens)
             positive_calls += calls[:positive].size
             negative_calls += calls[:negative].size
+            $jquery_calls_per_file.observe_value(calls[:positive].size + calls[:negative].size)
+            $pure_calls_per_file.observe_value(calls[:positive].size)
+          else
+            $jquery_calls_per_file.observe_value(0)
+            $gdbt_queries_per_file.observe_value(0)
+            $pure_calls_per_file.observe_value(0)
           end
         end
       rescue NoMethodError, ArgumentError, RKelly::SyntaxError, RuntimeError, Timeout::Error
@@ -100,7 +121,8 @@ module EmpiricalStudy
       parsed_files += 1
       total_lines += num_lines
     end
-    ''
+    EmpiricalStudy.slow_stats
+    true
   end
 
   def self.safe_div(numerator, divisor)
@@ -146,6 +168,32 @@ module EmpiricalStudy
     return false unless (str.start_with?("'") && str.end_with?("'")) ||
                         (str.start_with?('"') && str.end_with?('"'))
     true
+  end
+
+  def self.slow_stats
+    puts "GDBT queries per pure call"
+    puts "\tavg: #{$gdbt_queries_per_positive.average}"
+    puts "\tmed: #{$gdbt_queries_per_positive.median}"
+    puts "\tstd: #{$gdbt_queries_per_positive.standard_deviation}"
+    puts ""
+
+    puts "GDBT queries per file"
+    puts "\tavg: #{$gdbt_queries_per_file.average}"
+    puts "\tmed: #{$gdbt_queries_per_file.median}"
+    puts "\tstd: #{$gdbt_queries_per_file.standard_deviation}"
+    puts ""
+
+    puts "pure calls per file"
+    puts "\tavg: #{$pure_calls_per_file.average}"
+    puts "\tmed: #{$pure_calls_per_file.median}"
+    puts "\tstd: #{$pure_calls_per_file.standard_deviation}"
+    puts ""
+
+    puts "jquery calls per file"
+    puts "\tavg: #{$jquery_calls_per_file.average}"
+    puts "\tmed: #{$jquery_calls_per_file.median}"
+    puts "\tstd: #{$jquery_calls_per_file.standard_deviation}"
+    puts ""
   end
 
   def self.pure_gdbt_call?(str)
