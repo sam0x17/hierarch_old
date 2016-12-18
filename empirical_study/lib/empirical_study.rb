@@ -15,7 +15,7 @@ module EmpiricalStudy
   BAD_JQUERY_CHARS = [':', '[', ']'].freeze # not allowed
   WHITELIST_JQUERY_CHARS = ['-', '_', '.'].freeze # allowed
   DEBUG = false
-  UNIQUE_MODE = true
+  UNIQUE_MODE = false
 
   def self.parse_js_files
     unless Dir.exist? JS_DATA_DIR
@@ -72,7 +72,6 @@ module EmpiricalStudy
         'parse errors' => num_parse_errors,
         'percent parse errors' => "#{(safe_div(num_parse_errors, paths.size) * 100.0).round(3)}%",
         'blacklist hits' => blacklist_hits,
-        'uniquelist hits' => uniquelist_hits,
         'lines parsed' => total_lines,
         'avg lines' => safe_div(total_lines, parsed_files).round,
         'current file' => path.gsub(JS_DATA_DIR, '').rtruncate(TermInfo.screen_size.last - 26),
