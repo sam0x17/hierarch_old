@@ -7,6 +7,8 @@ work was conducted as a complement to the ongoing Hierarch/DFilter research
 project, which can be found at https://github.com/samkelly/hierarch. This work
 and all Hierarch-related material is (c) Sam Kelly.
 
+The paper for this study can be found [here](https://github.com/samkelly/hierarch/blob/master/empirical_study/hierarch_empirical_study_paper.pdf)
+
 ## Introduction
 
 Hierarch is a proof-of-concept implementation of a novel hierarchical indexing
