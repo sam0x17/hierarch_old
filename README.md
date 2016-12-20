@@ -19,3 +19,12 @@ Hierarch was designed for a UNIX environment, and has only been tested on Ubuntu
 5. ./run.sh
 
 This will run the test suite followed by the benchmarks used in the paper.
+
+## Empirical Study
+
+Recently we conducted an empirical study which found that the get-descendants-by-type
+queries optimized by Hierarch appear in over 56% of jQuery selectors, meaning that
+if the jQuery selector engine (Sizzle) were optimized using Hierarch, roughly 58%
+of JavaScript files in the wild should see improved performance.
+
+The study and the accompanying paper can be found in [/empirical_study](https://github.com/samkelly/hierarch/tree/master/empirical_study)
