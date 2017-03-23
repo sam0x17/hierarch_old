@@ -1,4 +1,6 @@
 #include "dfilter.hpp"
+#include "pavl_extensions.cpp"
+
 namespace DFI {
 
   // user-facing methods (the whole point of this library!):

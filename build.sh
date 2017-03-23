@@ -19,6 +19,6 @@ else
 fi
 echo ""
 echo "compiling test/demo to bin/hierarch..."
-g++ src/dfilter.cpp src/test.cpp -std=c++11 -static -O2 -I bin/usr/local/include/gnuavl -L bin/usr/local/lib -lgnuavl -o bin/hierarch
+g++ src/dfilter.cpp src/test.cpp -std=c++11 -static -O2 -I bin/usr/local/include/gnuavl -L bin/usr/local/lib -lgnuavl -fpermissive -o bin/hierarch
 echo ""
 echo "compilation complete."

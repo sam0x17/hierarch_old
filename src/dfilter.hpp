@@ -30,6 +30,7 @@ namespace DFI {
     int type_base_index = 0;
     int base_mod = 0;
     int type_mod = 0;
+    int ex_dfi_offset = 0;
     int cached_parent_dfi = 0;
     int cached_type_parent_dfi = 0;
     int cached_successor_dfi = 0;
