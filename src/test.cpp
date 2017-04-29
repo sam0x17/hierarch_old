@@ -152,8 +152,8 @@ void avl_to_dot_no_names(TNode *root, std::string path) {
     TNode *childB = NULL;
     if(cur->dnode->pnode->pavl_link[0] != NULL)
       childA = pavl_dnode(cur->dnode->pnode->pavl_link[0])->tnode;
-      if(cur->dnode->pnode->pavl_link[1] != NULL)
-        childB = pavl_dnode(cur->dnode->pnode->pavl_link[1])->tnode;
+    if(cur->dnode->pnode->pavl_link[1] != NULL)
+      childB = pavl_dnode(cur->dnode->pnode->pavl_link[1])->tnode;
     if(childA != NULL) {
       TNode *child = childA;
       std::string child_name = "\"" + itos(child->dnode->dfi()) + " (" + itos(child->type) + ")\"";
@@ -581,6 +581,10 @@ void benchmark_get_descendants_by_type_root() {
 }
 
 int main() {
+  /*TNode *root = generate_realistic_tree(100, 3);
+  DFilter filter = DFilter(root);
+  print_tree(root, 2);
+  exit(0);*/
   std::cout << "test suite started" << std::endl;
   test_generate_random_tree();
   test_index_generation();

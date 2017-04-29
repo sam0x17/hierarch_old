@@ -2,6 +2,7 @@
 #include "pavl_extensions.cpp"
 
 namespace DFI {
+  DFI_ALG_VARIANT algv = SIMPLE;
 
   // user-facing methods (the whole point of this library!):
 
@@ -320,52 +321,81 @@ namespace DFI {
     return type_base_index;
   }
 
-  // propagates DFI changes up the tree to the root
   void DFilter::propagate_dfi_change(DNode *node, int delta) {
+    // TODO: do we need lhs_offset at all?
+    // TODO: propagation in pavl matches this approach?
     assert(node != NULL);
-    int type = node->tnode->type;
-    int orig_base_index = node->dfi();
-    int orig_type_base_index = node->type_dfi();
-    latest_mod++;
-    increment_type_mod(type);
-    DNode *prev = NULL;
-    DNode *prev_type_node = NULL;
-    while(node != NULL) {
-      for(TNode *child : node->tnode->children) {
-        DNode *child_node = child->dnode;
-        if(child_node == prev) continue;
-        latest_mod--;
-        child_node->dfi(); // force child update on previous mod
-        latest_mod++;
-        if(child_node->base_index >= orig_base_index) {
-          child_node->base_index += delta;
-          child_node->base_mod = latest_mod;
+    if(algv == FULL) {
+      bool went_right = true;
+      DNode *type_node = node;
+      node = node->avl_parent();
+      for(;;) {
+        if(went_right) {
+          node->base_index += delta;
+          if(node->avl_rhs() != NULL)
+            node->rhs_offset += delta;
         }
-        decrement_type_mod(type);
-        child_node->type_dfi(); // force child type update on previous mod
-        increment_type_mod(type);
-        if(child->type == type && child_node->type_base_index >= orig_type_base_index ) {
-          child_node->type_base_index += delta;
-          child_node->type_mod = latest_type_mod(type);
+        if(node->avl_parent() == NULL) break;
+        went_right = !node->pnode_is_rhs();
+        node = node->avl_parent();
+      }
+      went_right = true;
+      for(;;) {
+        if(went_right) {
+          type_node->type_base_index += delta;
+          if(type_node->type_avl_rhs() != NULL)
+            node->type_rhs_offset += delta;
         }
+        if(node->type_avl_parent() == NULL) return;
+        went_right = !node->type_pnode_is_rhs();
+        node = node->type_avl_parent();
       }
-      if(node->base_index >= orig_base_index) {
-        node->base_index += delta;
-        if(prev != NULL)
-          prev->cached_parent_dfi = node->base_index;
-      }
-      if(node->tnode->type == type) {
-        if(node->type_base_index >= orig_type_base_index) {
-          node->type_base_index += delta;
-          if(prev_type_node != NULL)
-            prev_type_node->cached_type_parent_dfi = node->type_base_index;
+    } else {
+      // propagates DFI changes up the tree to the root
+      int type = node->tnode->type;
+      int orig_base_index = node->dfi();
+      int orig_type_base_index = node->type_dfi();
+      latest_mod++;
+      increment_type_mod(type);
+      DNode *prev = NULL;
+      DNode *prev_type_node = NULL;
+      while(node != NULL) {
+        for(TNode *child : node->tnode->children) {
+          DNode *child_node = child->dnode;
+          if(child_node == prev) continue;
+          latest_mod--;
+          child_node->dfi(); // force child update on previous mod
+          latest_mod++;
+          if(child_node->base_index >= orig_base_index) {
+            child_node->base_index += delta;
+            child_node->base_mod = latest_mod;
+          }
+          decrement_type_mod(type);
+          child_node->type_dfi(); // force child type update on previous mod
+          increment_type_mod(type);
+          if(child->type == type && child_node->type_base_index >= orig_type_base_index ) {
+            child_node->type_base_index += delta;
+            child_node->type_mod = latest_type_mod(type);
+          }
         }
-        node->type_mod = latest_type_mod(type);
-        prev_type_node = node;
+        if(node->base_index >= orig_base_index) {
+          node->base_index += delta;
+          if(prev != NULL)
+            prev->cached_parent_dfi = node->base_index;
+        }
+        if(node->tnode->type == type) {
+          if(node->type_base_index >= orig_type_base_index) {
+            node->type_base_index += delta;
+            if(prev_type_node != NULL)
+              prev_type_node->cached_type_parent_dfi = node->type_base_index;
+          }
+          node->type_mod = latest_type_mod(type);
+          prev_type_node = node;
+        }
+        node->base_mod = latest_mod;
+        prev = node;
+        node = node->parent();
       }
-      node->base_mod = latest_mod;
-      prev = node;
-      node = node->parent();
     }
   }
 
@@ -492,6 +522,20 @@ namespace DFI {
       return NULL;
     assert(pnode->pavl_parent->pavl_data != NULL);
     return pavl_dnode(pnode->pavl_parent);
+  }
+
+  DNode *DNode::avl_rhs() {
+    assert(pnode != NULL);
+    if(pnode->pavl_link[1] == NULL)
+      return NULL;
+    return pavl_dnode(pnode->pavl_link[1]);
+  }
+
+  DNode *DNode::avl_lhs() {
+    assert(pnode != NULL);
+    if(pnode->pavl_link[0] == NULL)
+      return NULL;
+    return pavl_dnode(pnode->pavl_link[0]);
   }
 
   DNode *DNode::type_avl_parent() {

@@ -1,6 +1,7 @@
 #ifndef _DFILTER_GUARD
 #define _DFILTER_GUARD
 
+
 #include <iostream>
 #include <vector>
 #include <queue>
@@ -14,6 +15,10 @@ extern "C" {
 
 namespace DFI {
 
+  enum DFI_ALG_VARIANT {
+    SIMPLE, FULL
+  };
+
   const int NODE_DELETED = 65182332;
   const int NODE_ALIVE = 93390193;
 
@@ -26,11 +31,18 @@ namespace DFI {
 
   class DNode {
   public:
+    // SIMPLE mode variables
     int base_index = 0;
     int type_base_index = 0;
     int base_mod = 0;
     int type_mod = 0;
-    int ex_dfi_offset = 0;
+
+    // FULL mode variables
+    int lhs_offset = 0;
+    int rhs_offset = 0;
+    int type_lhs_offset = 0;
+    int type_rhs_offset = 0;
+
     int cached_parent_dfi = 0;
     int cached_type_parent_dfi = 0;
     int cached_successor_dfi = 0;
@@ -46,6 +58,8 @@ namespace DFI {
     DNode *parent();
     DNode *type_parent(int type);
     DNode *avl_parent();
+    DNode *avl_rhs();
+    DNode *avl_lhs();
     DNode *type_avl_parent();
     DNode *type_avl_rhs();
     DNode *type_avl_lhs();

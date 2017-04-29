@@ -1,17 +1,29 @@
 
 inline void pavl_propagate_ex(struct pavl_node *node) {
   DFI::DNode *dnode = (DFI::DNode *)node->pavl_data;
-  if(dnode->ex_dfi_offset != 0) {
-    dnode->base_index += dnode->ex_dfi_offset;
-    if(node->pavl_link[0] != NULL) { // propagate LHS
-      DFI::DNode *dnode_lhs = (DFI::DNode *)node->pavl_link[0]->pavl_data;
-      dnode_lhs->ex_dfi_offset += dnode->ex_dfi_offset;
+  if(node->pavl_parent != NULL) {
+    DFI::DNode *dnode_parent = (DFI::DNode *)node->pavl_parent->pavl_data;
+    if(node == dnode_parent->pnode->pavl_link[0] && dnode_parent->lhs_offset != 0) { // is parent's LHS
+      dnode->base_index += dnode_parent->lhs_offset;
+      dnode->lhs_offset += dnode_parent->lhs_offset;
+      dnode->rhs_offset += dnode_parent->lhs_offset;
+      dnode_parent->lhs_offset = 0;
+    } else if(node == dnode_parent->pnode->pavl_link[1] && dnode_parent->rhs_offset != 0) { // is parent's RHS
+      dnode->base_index += dnode_parent->rhs_offset;
+      dnode->lhs_offset += dnode_parent->rhs_offset;
+      dnode->rhs_offset += dnode_parent->rhs_offset;
+      dnode_parent->rhs_offset = 0;
     }
-    if(node->pavl_link[1] != NULL) { // propagate RHS
-      DFI::DNode *dnode_rhs = (DFI::DNode *)node->pavl_link[1]->pavl_data;
-      dnode_rhs->ex_dfi_offset += dnode->ex_dfi_offset;
-    }
-    dnode->ex_dfi_offset = 0;
+  }
+  if(dnode->lhs_offset != 0 && node->pavl_link[0] != NULL) {
+    DFI::DNode *dnode_lhs = (DFI::DNode *)node->pavl_link[0]->pavl_data;
+    dnode_lhs->lhs_offset += dnode->lhs_offset;
+    dnode_lhs->rhs_offset += dnode->lhs_offset;
+  }
+  if(dnode->rhs_offset != 0 && node->pavl_link[1] != NULL) {
+    DFI::DNode *dnode_rhs = (DFI::DNode *)node->pavl_link[1]->pavl_data;
+    dnode_rhs->lhs_offset += dnode->rhs_offset;
+    dnode_rhs->rhs_offset += dnode->rhs_offset;
   }
 }
 
@@ -99,8 +111,8 @@ struct pavl_node *pavl_probe_node_ex(struct pavl_table *tree, void *item) {
              X2  B7   =>    / \
             / \            W1  Y5
            W1  A3              / \
-                              A3  B7
-      */
+                 \            A3  B7
+      *///       A4
       // w = x
       // y.left = x.right (A)
       // x.right = y
