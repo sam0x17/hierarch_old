@@ -1,5 +1,6 @@
 # Installation-Specific Folders
-bin
+core/bin
+core/include
 
 # Compiled Object files
 *.slo
