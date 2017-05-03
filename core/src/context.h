@@ -4,18 +4,23 @@
 #include <hierarch/hierarch.h>
 
 namespace Hierarch {
-  bool DEBUG_MODE = true;
-
-  class Context {
+  class ContextInfo {
   public:
-    Node root;
-    unsigned int latest_mod = 0;
-    unsigned int num_nodes = 0;
+    count_t num_nodes = 0;
+    index_t min_index = 0;
+    index_t max_index = 0;
+    void *avl_root = NULL;
+  };
+
+  class Context : public ContextInfo {
+  public:
+    Node *root = NULL;
+    spp::sparse_hash_map<node_id_t, Node> nodes;
+    spp::sparse_hash_map<type_id_t, ContextInfo> types;
+    bool benchmark = false;
     unsigned long num_basic_ops = 0;
-    std::vector<int> types;
-    // hashtable of node ids
   private:
-    void record_basic_op();
+    void basic_op();
   };
 }
 #endif
