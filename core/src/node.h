@@ -11,7 +11,7 @@ namespace Hierarch {
   public:
     index_t index = 0;
     index_t offset = 0;
-    struct avl_node *anode;
+    struct avl_node anode;
 
     /*Node *avl_parent();
     Node *avl_left();
