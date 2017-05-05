@@ -9,7 +9,7 @@ namespace Hierarch {
     count_t num_nodes = 0;
     index_t min_index = 0;
     index_t max_index = 0;
-    void *avl_root = NULL;
+    struct avl_tree *atree;
   };
 
   class Context : public ContextInfo {

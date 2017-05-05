@@ -6,6 +6,8 @@
 #include <cstdlib>
 
 #include <sparsepp/spp.h>
+#include <avltree/avltree.h>
+
 #include <hierarch/types.h>
 #include <hierarch/node.h>
 #include <hierarch/result.h>
