@@ -5,33 +5,35 @@
 
 namespace Hierarch {
   class Node;
-  class Result;
+  class TypeNode;
 
-  class NodeInfo {
+  class AvlNode {
   public:
     index_t base_index = 0;
     index_t offset = 0;
     struct avl_node avl;
 
-    Node *avl_parent();
-    Node *avl_left();
-    Node *avl_right();
+    AvlNode *avl_parent();
+    AvlNode *avl_left();
+    AvlNode *avl_right();
     index_t index();
     bool avl_is_right_child();
     bool avl_is_left_child();
+    Node *node();
+    TypeNode *type_node();
   };
 
-  class TypeInfo : public NodeInfo {
+  class TypeNode : public AvlNode {
   public:
     type_id_t type_id = 0;
   };
 
-  class Node : public NodeInfo {
+  class Node : public AvlNode {
   public:
     node_id_t id = 0;
     Node *parent = NULL;
-    std::vector<Node*> children;
-    std::vector<TypeInfo> types;
+    std::vector<Node> children;
+    std::vector<TypeNode> types;
 
     bool is_root();
     bool is_leaf();
