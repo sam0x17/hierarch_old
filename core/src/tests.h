@@ -9,10 +9,18 @@ namespace HierarchTests {
 
   void pass() { std::cout << "." << std::flush; }
 
-  void test_node_info_index() {
+  void test_node_index() {
     Node node;
-    std::cout << "node address: " << (void *)(&node) << std::endl;
-    std::cout << "thingaddress: " << (void *)(&node.avl) << std::endl;
+    node.offset = -3;
+    node.base_index = 7;
+    assert(node.index() == 4);
+    node.offset = 2;
+    assert(node.index() == 9);
+    pass();
+  }
+
+  void test_type_node_index() {
+    TypeNode node;
     node.offset = -3;
     node.base_index = 7;
     assert(node.index() == 4);
@@ -22,7 +30,8 @@ namespace HierarchTests {
   }
 
   void run() {
-    test_node_info_index();
+    test_node_index();
+    test_type_node_index();
     std::cout << std::endl;
   }
 }
