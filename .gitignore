@@ -1,6 +1,7 @@
 # Installation-Specific Folders
 core/bin
 core/include
+core/opt
 
 # Compiled Object files
 *.slo
