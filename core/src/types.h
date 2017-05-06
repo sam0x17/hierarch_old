@@ -8,4 +8,5 @@ namespace Hierarch {
   typedef uint_fast32_t count_t;
   typedef uint_fast32_t index_t;
 }
+typedef Hierarch::index_t hierarch_index_t;
 #endif

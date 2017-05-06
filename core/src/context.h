@@ -17,10 +17,6 @@ namespace Hierarch {
     Node *root = NULL;
     spp::sparse_hash_map<node_id_t, Node> nodes;
     spp::sparse_hash_map<type_id_t, ContextInfo> types;
-    bool benchmark = false;
-    unsigned long num_basic_ops = 0;
-  private:
-    void basic_op();
   };
 }
 #endif

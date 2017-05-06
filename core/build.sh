@@ -11,6 +11,7 @@ mkdir -p ../include/hierarch || exit 1
 mkdir -p ../include/avltree || exit 1
 cp sparsepp/sparsepp/*.h ../include/sparsepp/ || exit 1
 cp avltree/avltree/* ../include/avltree || exit 1
+sed -i 's/avl_parent/_avl_parent/g' ../include/avltree/* || exit 1
 cd .. || exit 1
 rm bin/* -rf || exit 1
 cp src/*.h include/hierarch/ || exit 1
