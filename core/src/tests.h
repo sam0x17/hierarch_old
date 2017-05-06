@@ -11,6 +11,8 @@ namespace HierarchTests {
 
   void test_node_info_index() {
     Node node;
+    std::cout << "node address: " << (void *)(&node) << std::endl;
+    std::cout << "thingaddress: " << (void *)(&node.avl) << std::endl;
     node.offset = -3;
     node.base_index = 7;
     assert(node.index() == 4);

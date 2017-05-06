@@ -9,16 +9,16 @@ namespace Hierarch {
 
   class AvlNode {
   public:
+    struct avl_node avl; // MUST be first variable
     index_t base_index = 0;
     index_t offset = 0;
-    struct avl_node avl;
 
     AvlNode *avl_parent();
     AvlNode *avl_left();
     AvlNode *avl_right();
     index_t index();
-    bool avl_is_right_child();
-    bool avl_is_left_child();
+    bool avl_is_left();
+    bool avl_is_right();
     Node *node();
     TypeNode *type_node();
   };
