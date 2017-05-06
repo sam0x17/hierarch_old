@@ -3,7 +3,7 @@
 
 hierarch_index_t avl_node_value(struct avl_node *node) {
   Hierarch::NodeInfo *info = _get_entry(node, Hierarch::NodeInfo, avl);
-  return info->index + info->offset;
+  return info->base_index + info->offset;
 }
 
 extern "C" {

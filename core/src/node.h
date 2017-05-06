@@ -9,13 +9,14 @@ namespace Hierarch {
 
   class NodeInfo {
   public:
-    index_t index = 0;
+    index_t base_index = 0;
     index_t offset = 0;
     struct avl_node avl;
 
     Node *avl_parent();
     Node *avl_left();
     Node *avl_right();
+    index_t index();
     bool avl_is_right_child();
     bool avl_is_left_child();
   };
