@@ -5,5 +5,6 @@ namespace Hierarch {
 }
 
 int main() {
-  std::cout << "hello world" << std::endl;
+  std::cout << "running tests" << std::endl;
+  HierarchTests::run();
 }

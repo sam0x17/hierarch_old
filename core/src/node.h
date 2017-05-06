@@ -1,5 +1,5 @@
-#ifndef _HIERARCH_NODE
-#define _HIERARCH_NODE
+#ifndef HIERARCH_NODE
+#define HIERARCH_NODE
 
 #include <hierarch/hierarch.h>
 

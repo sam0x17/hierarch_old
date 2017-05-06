@@ -1,5 +1,5 @@
-#ifndef _HIERARCH_TYPES
-#define _HIERARCH_TYPES
+#ifndef HIERARCH_TYPES
+#define HIERARCH_TYPES
 
 namespace Hierarch {
   typedef uint_fast16_t context_id_t;

@@ -1,5 +1,5 @@
-#ifndef _HIERARCH_AVL_BRIDGE
-#define _HIERARCH_AVL_BRIDGE
+#ifndef HIERARCH_AVL_BRIDGE
+#define HIERARCH_AVL_BRIDGE
 
 hierarch_index_t avl_node_value(struct avl_node *node) {
   Hierarch::NodeInfo *info = _get_entry(node, Hierarch::NodeInfo, avl);

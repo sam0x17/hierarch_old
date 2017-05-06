@@ -1,5 +1,5 @@
-#ifndef _HIERARCH
-#define _HIERARCH
+#ifndef HIERARCH
+#define HIERARCH
 
 #include <iostream>
 #include <vector>
@@ -13,6 +13,7 @@
 #include <hierarch/avl_bridge.h>
 #include <hierarch/result.h>
 #include <hierarch/context.h>
+#include <hierarch/tests.h>
 
 namespace Hierarch {
   std::vector<Context> contexts;

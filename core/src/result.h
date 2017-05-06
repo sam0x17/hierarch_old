@@ -1,5 +1,5 @@
-#ifndef _HIERARCH_RESULT
-#define _HIERARCH_RESULT
+#ifndef HIERARCH_RESULT
+#define HIERARCH_RESULT
 
 #include <hierarch/hierarch.h>
 

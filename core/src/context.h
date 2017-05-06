@@ -1,5 +1,5 @@
-#ifndef _HIERARCH_CONTEXT
-#define _HIERARCH_CONTEXT
+#ifndef HIERARCH_CONTEXT
+#define HIERARCH_CONTEXT
 
 #include <hierarch/hierarch.h>
 
