@@ -6,6 +6,7 @@
 namespace Hierarch {
   class ContextInfo {
   public:
+    context_id_t context_id;
     count_t num_nodes = 0;
     index_t min_index = 0;
     index_t max_index = 0;
