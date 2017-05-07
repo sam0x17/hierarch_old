@@ -45,14 +45,14 @@ namespace Hierarch {
   void delete_context();
   Context *current_context();
 
-  void enable_benchmark();
-  void disable_benchmark();
+  void start_benchmark();
+  void end_benchmark();
   context_id_t gen_context_id();
   type_id_t gen_type_id();
   node_id_t gen_node_id();
 
   bool benchmark = false;
   unsigned long num_basic_ops = 0;
-  void basic_op();
+  inline void basic_op();
 }
 #endif

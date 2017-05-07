@@ -35,6 +35,23 @@ namespace Hierarch {
   }
 
   Context *current_context() { return ctx; }
+
+  void start_benchmark() {
+    std::cout << "starting benchmark" << std::endl;
+    num_basic_ops = 0;
+    benchmark = true;
+  }
+
+  void end_benchmark() {
+    std::cout << "benchmark finished" << std::endl;
+    std::cout << "\tbasic ops: " << num_basic_ops << std::endl;
+    benchmark = false;
+  }
+
+  inline void basic_op() {
+    if(!benchmark) return;
+    num_basic_ops++;
+  }
 }
 
 int main() {
