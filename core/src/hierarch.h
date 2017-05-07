@@ -41,7 +41,7 @@ namespace Hierarch {
   void delete_type(type_id_t type_id);
 
   context_id_t create_context();
-  void switch_context(context_id_t context_id);
+  Context *switch_context(context_id_t context_id);
   void delete_context();
   Context *current_context();
 
