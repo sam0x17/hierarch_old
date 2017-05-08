@@ -10,6 +10,7 @@ namespace HierarchTests {
   void test_type_node_index();
   void test_context_manipulation();
   void test_context_id_stability();
+  void test_type_id_stability();
 }
 
 #endif
