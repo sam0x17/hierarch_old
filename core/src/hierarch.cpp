@@ -1,6 +1,12 @@
 #include <hierarch/hierarch.h>
 
 namespace Hierarch {
+  void init() {
+    if(ran_init) return;
+    ran_init = true;
+    rng.seed(std::random_device()());
+  }
+
   context_id_t create_context() {
     for(;;) {
       context_id_t id = gen_context_id();
@@ -10,9 +16,7 @@ namespace Hierarch {
         contexts.insert({id, context});
         return id;
       }
-      if(contexts.size() >= MAX_CTX_ID) {
-        throw "max number of contexts exceeded!";
-      }
+      assert(contexts.size() <= MAX_CTX_ID);
     }
   }
 
@@ -22,21 +26,33 @@ namespace Hierarch {
 
   Context *switch_context(context_id_t context_id) {
     auto got = contexts.find(context_id);
-    if(got == contexts.end()) {
-      throw "unknown context_id!";
-    }
+    assert(got != contexts.end());
     ctx = &(got->second);
     return ctx;
   }
 
   void delete_context() {
-    if(ctx == NULL) throw "tried to erase blank context!";
+    assert(ctx != NULL);
     //TODO: deallocate stuff
     contexts.erase(ctx->context_id);
     ctx = NULL;
   }
 
   Context *current_context() { return ctx; }
+
+  type_id_t create_type() {
+    assert(ctx != NULL);
+    for(;;) {
+      type_id_t id = gen_type_id();
+      if(!ctx->types.contains(id)) {
+        TypeContext type_context;
+        type_context.type_id = id;
+        ctx->types.insert({id, type_context});
+        return id;
+      }
+      assert(ctx->types.size() <= MAX_TYPE_ID);
+    }
+  }
 
   void start_benchmark() {
     std::cout << "starting benchmark" << std::endl;
@@ -58,8 +74,5 @@ namespace Hierarch {
 
 int main() {
   Hierarch::init();
-  std::cout << "running tests" << std::endl;
-  Hierarch::context_id_t id = Hierarch::create_context();
   HierarchTests::run();
-  Hierarch::switch_context(id);
 }

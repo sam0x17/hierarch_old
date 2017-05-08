@@ -47,10 +47,33 @@ namespace HierarchTests {
     pass();
   }
 
+  void test_context_id_stability() {
+    unsigned int count = 0;
+    for(context_id_t i = MIN_CTX_ID; i < MAX_CTX_ID; i++) {
+      create_context();
+      count++;
+    }
+    assert(contexts.size() == MAX_CTX_ID);
+    assert(contexts.size() == count);
+    std::vector<context_id_t> ids;
+    for(auto kv : contexts)
+      ids.push_back(kv.first);
+    for(context_id_t id : ids) {
+      switch_context(id);
+      assert(ctx != NULL);
+      assert(ctx->context_id == id);
+      delete_context();
+    }
+    assert(contexts.size() == 0);
+    assert(ctx == NULL);
+    pass();
+  }
+
   void run() {
     test_node_index();
     test_type_node_index();
     test_context_manipulation();
+    test_context_id_stability();
     std::cout << std::endl;
   }
 }

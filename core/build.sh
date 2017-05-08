@@ -21,6 +21,6 @@ cp opt/sparsepp/sparsepp/*.h include/sparsepp/ || exit 1
 cp opt/avltree/avltree/* include/avltree || exit 1
 sed -i 's/avl_parent/_avl_parent/g' include/avltree/* || exit 1
 cp src/*.h include/hierarch/ || exit 1
-cat src/hierarch.cpp src/node.cpp src/tests.cpp > /tmp/hierarch.cpp || exit 1 # amalgamate cpp files for simpler include structure
+cat src/hierarch.cpp src/node.cpp src/context.cpp src/tests.cpp > /tmp/hierarch.cpp || exit 1 # amalgamate cpp files for simpler include structure
 g++ /tmp/hierarch.cpp include/avltree/avltree.c -std=c++14 -static -Wall -O3 -I include -o bin/hierarch || exit 1
 ./bin/hierarch

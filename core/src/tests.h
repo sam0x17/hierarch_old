@@ -1,8 +1,6 @@
 #ifndef HIERARCH_TESTS
 #define HIERARCH_TESTS
 
-#include <assert.h>
-
 namespace HierarchTests {
   using namespace Hierarch;
 
@@ -11,6 +9,7 @@ namespace HierarchTests {
   void test_node_index();
   void test_type_node_index();
   void test_context_manipulation();
+  void test_context_id_stability();
 }
 
 #endif

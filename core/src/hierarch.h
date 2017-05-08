@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdlib>
 #include <limits>
+#include <assert.h>
 
 #include <sparsepp/spp.h>
 #include <avltree/avltree.h>
@@ -31,11 +32,7 @@ namespace Hierarch {
   Context *ctx = NULL;
   bool ran_init = false;
 
-  inline void init() {
-    if(ran_init) return;
-    ran_init = true;
-    rng.seed(std::random_device()());
-  }
+  void init();
 
   type_id_t create_type();
   void delete_type(type_id_t type_id);
