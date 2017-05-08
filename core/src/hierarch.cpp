@@ -25,13 +25,15 @@ namespace Hierarch {
     if(got == contexts.end()) {
       throw "unknown context_id!";
     }
-    ctx = &got->second;
+    ctx = &(got->second);
     return ctx;
   }
 
   void delete_context() {
     if(ctx == NULL) throw "tried to erase blank context!";
+    //TODO: deallocate stuff
     contexts.erase(ctx->context_id);
+    ctx = NULL;
   }
 
   Context *current_context() { return ctx; }
