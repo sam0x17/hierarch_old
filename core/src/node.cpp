@@ -58,6 +58,23 @@ namespace Hierarch {
     return this->base_index;
   }
 
+  void AvlNode::displace_helper(index_t delta, index_t shift_start, index_t mod) {
+    if(this->avl_parent() != NULL)
+      this->avl_parent()->displace_helper(delta, shift_start, mod);
+    this->offset = 0;
+    if(this->base_index > shift_start)
+      this->base_index += delta;
+    if(this->avl_left() != NULL && this->avl_left()->base_index > shift_start)
+      this->avl_left()->offset += delta;
+    if(this->avl_right() != NULL && this->avl_right()->base_index > shift_start)
+      this->avl_right()->offset += delta;
+    this->mod = mod;
+  }
+
+  void AvlNode::displace(index_t delta) {
+    this->displace_helper(delta, this->index(), ++this->context()->mod);
+  }
+
   bool Node::is_root() {
     return this->parent == NULL;
   }

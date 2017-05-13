@@ -31,6 +31,8 @@ namespace Hierarch {
     AvlNode *avl_parent();
     AvlNode *avl_left();
     AvlNode *avl_right();
+    void displace(index_t delta);
+    void displace_helper(index_t delta, index_t shift_start, index_t mod);
     Context *context();
     index_t index();
     bool avl_is_left();

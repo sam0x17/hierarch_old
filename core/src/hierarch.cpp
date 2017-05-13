@@ -28,6 +28,7 @@ namespace Hierarch {
     auto got = contexts.find(context_id);
     assert(got != contexts.end());
     ctx = &(got->second);
+    node_cursor = NULL;
     return ctx;
   }
 
@@ -35,6 +36,7 @@ namespace Hierarch {
     assert(ctx != NULL);
     contexts.erase(ctx->context_id);
     ctx = NULL;
+    node_cursor = NULL;
   }
 
   Context *current_context() { return ctx; }
@@ -54,6 +56,7 @@ namespace Hierarch {
   }
 
   void select_node(node_id_t node_id) {
+    assert(ctx != NULL);
     assert(ctx->nodes.contains(node_id));
     node_cursor = &ctx->nodes[node_id];
     assert(node_cursor->id == node_id);
