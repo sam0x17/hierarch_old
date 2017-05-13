@@ -3,26 +3,6 @@
 namespace HierarchTests {
   void pass() { std::cout << "." << std::flush; }
 
-  void test_node_index() {
-    Node node;
-    node.offset = -3;
-    node.base_index = 7;
-    assert(node.index() == 4);
-    node.offset = 2;
-    assert(node.index() == 9);
-    pass();
-  }
-
-  void test_type_node_index() {
-    TypeNode node;
-    node.offset = -3;
-    node.base_index = 7;
-    assert(node.index() == 4);
-    node.offset = 2;
-    assert(node.index() == 9);
-    pass();
-  }
-
   void test_context_manipulation() {
     assert(current_context() == NULL);
     context_id_t id = create_context();
@@ -86,8 +66,6 @@ namespace HierarchTests {
   }
 
   void run() {
-    test_node_index();
-    test_type_node_index();
     test_context_manipulation();
     test_context_id_stability();
     test_type_id_stability();

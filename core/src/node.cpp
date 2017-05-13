@@ -40,16 +40,23 @@ namespace Hierarch {
   }
 
   index_t AvlNode::index() {
-    return this->offset + this->base_index;
-  }
-
-  /*void AvlNode::propagate_offset() {
-    if(this->offset == 0) return;
-    this->base_index += this->offset;
+    basic_op();
+    if(this->mod >= this->context()->mod)
+      return this->base_index;
+    assert(this->avl_parent() != NULL);
+    this->avl_parent()->index(); // recursive call
+    assert(this->avl_parent()->mod == this->context()->mod); // avl parent should be up-to-date
+    assert(this->avl_parent()->offset == 0);
+    if(this->avl_left() != NULL)
+      this->avl_left()->offset += this->offset;
     if(this->avl_right() != NULL)
       this->avl_right()->offset += this->offset;
+    this->base_index += this->offset;
     this->offset = 0;
-  }*/
+    this->mod = this->avl_parent()->mod;
+    assert(this->avl_parent()->base_index < this->base_index);
+    return this->base_index;
+  }
 
   bool Node::is_root() {
     return this->parent == NULL;
