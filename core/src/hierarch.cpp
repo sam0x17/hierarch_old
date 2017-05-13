@@ -54,6 +54,47 @@ namespace Hierarch {
     }
   }
 
+  /*node_id_t add_leaf() {
+    Node node_tmp;
+    node_tmp.id = gen_node_id();
+    ctx->nodes.insert({node_tmp.id, node_tmp});
+    Node *node = &ctx->nodes[node_tmp.id];
+    node->parent = node_cursor;
+    basic_op();
+    if(node_cursor != NULL) { // if there is a selected node
+      node->parent->apply_offset();
+      if(node->parent->successor != NULL) { // if there is a parent successor
+        node->parent->successor->applly_offset();
+        node->base_index = node->parent->successor->base_index;
+        node->successor = node->parent->successor;
+        for(AvlNode *predecessor : node->successor->predecessors) { // for each predecessor of parent's successor
+          basic_op();
+          if(predecessor->index() > node->parent->base_index) { // if a descendant of parent
+            predecessor->successor = node;
+          }
+        }
+      } else { // parent successor is imaginary
+        node->base_index = ctx->max_index;
+      }
+    } else {
+      assert(ctx->root == NULL); // must make a selection if there is a root
+    }
+    ctx->max_index += offset;
+    return node->id;
+  }
+
+  void propagate(AvlNode *changed_node, index_t offset) {
+    index_t reference = start_node->index();
+    for(AvlNode *cursor = start_node->avl_parent(); cursor != NULL; cursor = cursor->avl_parent()) {
+      //if(cursor->index
+      cursor->offset += offset;
+    }
+
+  }*/
+
+  void select_node(node_id_t node_id);
+  void apply_type(node_id_t node_id, type_id_t node_type);
+
   void start_benchmark() {
     std::cout << "starting benchmark" << std::endl;
     num_basic_ops = 0;

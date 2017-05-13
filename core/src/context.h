@@ -7,6 +7,10 @@ namespace Hierarch {
   class ContextBase {
   public:
     struct avl_tree atree;
+    index_t min_index = 0;
+    index_t max_index = 0;
+    index_t mod = 0;
+    std::vector<AvlNode*> imaginary_predecessors;
     ContextBase();
   };
 
@@ -14,8 +18,6 @@ namespace Hierarch {
   public:
     type_id_t type_id = 0;
     count_t num_nodes = 0;
-    index_t min_index = 0;
-    index_t max_index = 0;
   };
 
   class Context : public ContextBase {

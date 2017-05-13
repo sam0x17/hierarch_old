@@ -30,6 +30,7 @@ namespace Hierarch {
   std::uniform_int_distribution<std::mt19937::result_type> node_dist(MIN_NODE_ID, MAX_NODE_ID);
   spp::sparse_hash_map<context_id_t, Context> contexts;
   Context *ctx = NULL;
+  Node *node_cursor = NULL;
   bool ran_init = false;
 
   void init();
@@ -41,6 +42,10 @@ namespace Hierarch {
   Context *switch_context(context_id_t context_id);
   void delete_context();
   Context *current_context();
+
+  node_id_t add_leaf();
+  void select_node(node_id_t node_id);
+  void apply_type(node_id_t node_id, type_id_t node_type);
 
   void start_benchmark();
   void end_benchmark();
