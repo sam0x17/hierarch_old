@@ -33,7 +33,6 @@ namespace Hierarch {
 
   void delete_context() {
     assert(ctx != NULL);
-    //TODO: deallocate stuff
     contexts.erase(ctx->context_id);
     ctx = NULL;
   }
@@ -52,6 +51,12 @@ namespace Hierarch {
       }
       assert(ctx->types.size() <= MAX_TYPE_ID);
     }
+  }
+
+  void select_node(node_id_t node_id) {
+    assert(ctx->nodes.contains(node_id));
+    node_cursor = &ctx->nodes[node_id];
+    assert(node_cursor->id == node_id);
   }
 
   /*node_id_t add_leaf() {
@@ -92,7 +97,6 @@ namespace Hierarch {
 
   }*/
 
-  void select_node(node_id_t node_id);
   void apply_type(node_id_t node_id, type_id_t node_type);
 
   void start_benchmark() {
