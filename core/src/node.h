@@ -53,7 +53,7 @@ namespace Hierarch {
   public:
     node_id_t id = 0;
     Node *parent = NULL;
-    std::vector<Node> children;
+    std::vector<Node*> children;
     spp::sparse_hash_map<type_id_t, TypeNode> types;
 
     bool is_root();

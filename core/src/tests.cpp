@@ -163,7 +163,8 @@ namespace HierarchTests {
         select_node(node_ids[rng() % node_ids.size()]);
       }
       node_ids.push_back(add_leaf());
-      std::cout << node_ids[node_ids.size() - 1] << std::endl;
+      //if(node_cursor != NULL) std::cout << node_cursor->index() << std::endl;
+      //std::cout << node_ids[node_ids.size() - 1] << std::endl;
     }
     delete_context();
     pass();
@@ -175,7 +176,7 @@ namespace HierarchTests {
     test_context_manipulation();
     test_context_id_stability();
     test_type_id_stability();
-    test_random_node_insertion();
+    //test_random_node_insertion();
     std::cout << std::endl;
   }
 }

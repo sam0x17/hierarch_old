@@ -16,7 +16,12 @@ extern "C" {
 
   void avl_touch(struct avl_node *n) {
     if(n == NULL) return;
-    Hierarch::AvlNode
+    Hierarch::AvlNode *node = (Hierarch::AvlNode *)n;
+    if(node->avl_left() != NULL)
+      node->avl_left()->index();
+    if(node->avl_right() != NULL)
+      node->avl_right()->index();
+    node->index();
   }
 }
 

@@ -68,7 +68,10 @@ namespace Hierarch {
       assert(this->offset == 0);
       return this->base_index;
     } else if(this->avl_parent() == NULL) {
-      assert(false); // bad rotation adjustment
+      //assert(false); // bad rotation adjustment
+      assert(this->offset == 0);
+      this->mod = ++this->context()->mod;
+      return this->base_index;
     }
     this->avl_parent()->index(); // recursive call
     assert(this->avl_parent()->offset == 0);
@@ -90,10 +93,10 @@ namespace Hierarch {
     this->offset = 0;
     if(this->base_index >= shift_start)
       this->base_index += delta;
-    if(this->avl_left() != NULL && this->avl_left()->base_index > shift_start) {
+    if(this->avl_left() != NULL && this->avl_left()->base_index + this->avl_left()->offset > shift_start) {
       this->avl_left()->offset += delta;
     }
-    if(this->avl_right() != NULL && this->avl_right()->base_index > shift_start) {
+    if(this->avl_right() != NULL && this->avl_right()->base_index + this->avl_right()->offset > shift_start) {
       this->avl_right()->offset += delta;
     }
     this->mod = mod;
