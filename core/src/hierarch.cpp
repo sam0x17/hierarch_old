@@ -63,6 +63,7 @@ namespace Hierarch {
   }
 
   node_id_t add_leaf() {
+    std::cout << "== add sequence started" << std::endl;
     assert(ctx != NULL);
     ctx->max_index++;
     // node displacement and insertion
@@ -75,16 +76,25 @@ namespace Hierarch {
     Node *parent = node->parent;
     AvlNode *successor = NULL; // displaced node
     if(parent != NULL) { // if there is a parent
+      std::cout << "there is a parent" << std::endl;
+      std::cout << "initial parent index: " << parent->index() << std::endl;
       parent->index();
       successor = parent->successor;
     }
     if(successor != NULL) { // if there is a successor
+      std::cout << "there is a successor" << std::endl;
       assert(successor != parent);
+      std::cout << "initial successor index: " << successor->index() << std::endl;
       node->base_index = successor->index();
       assert(successor->mod == ctx->mod);
       assert(successor->offset == 0);
+      std::cout << "displacing successor index by +1" << std::endl;
       successor->displace(+1); // displace successor, since we have taken its index
       assert(successor->base_index == node->base_index + 1);
+      assert(successor->offset == 0);
+      assert(successor->mod == ctx->mod);
+      std::cout << "successor new index: " << successor->index() << std::endl;
+      parent->index();
       assert(parent->mod == ctx->mod);
     } else { // successor is imaginary
       if(parent == NULL) { // first node in empty tree
@@ -107,6 +117,10 @@ namespace Hierarch {
     avl_insert(&node->context()->atree, &node->avl, cmp_func); // make avl insertion
     node->index();
     assert(node->offset == 0);
+    if(parent != NULL && node->index() <= parent->index()) {
+      std::cout << "node index: " << node->index() << std::endl;
+      std::cout << "parent index: " << parent->index() << std::endl;
+    }
     if(parent != NULL) assert(node->index() > parent->index());
     if(successor != NULL) assert(node->index() < successor->index());
 
@@ -136,6 +150,7 @@ namespace Hierarch {
       successor->predecessors.clear();
       successor->predecessors = modified_predecessors;
     }
+    if(parent != NULL) assert(parent != successor);
     return node->id;
   }
 

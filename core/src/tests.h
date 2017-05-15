@@ -11,6 +11,7 @@ namespace HierarchTests {
   void test_context_id_stability();
   void test_type_id_stability();
   void test_basic_node_insertion();
+  void test_random_node_insertion();
 }
 
 #endif

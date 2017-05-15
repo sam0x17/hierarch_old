@@ -154,12 +154,28 @@ namespace HierarchTests {
     pass();
   }
 
+  void test_random_node_insertion() {
+    std::cout << "test_random_node_insertion... " << std::endl;
+    switch_context(create_context());
+    std::vector<node_id_t> node_ids;
+    for(int i = 0; i < 1000; i++) {
+      if(node_ids.size() > 0) {
+        select_node(node_ids[rng() % node_ids.size()]);
+      }
+      node_ids.push_back(add_leaf());
+      std::cout << node_ids[node_ids.size() - 1] << std::endl;
+    }
+    delete_context();
+    pass();
+  }
+
   void run() {
     test_basic_node_insertion();
     test_node_addressing_issues();
     test_context_manipulation();
     test_context_id_stability();
     test_type_id_stability();
+    test_random_node_insertion();
     std::cout << std::endl;
   }
 }

@@ -13,6 +13,11 @@ extern "C" {
     if(cmp > 0) return 1;
     return 0;
   }
+
+  void avl_touch(struct avl_node *n) {
+    if(n == NULL) return;
+    Hierarch::AvlNode
+  }
 }
 
 #endif
