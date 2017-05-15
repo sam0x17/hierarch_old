@@ -1,7 +1,5 @@
 # Installation-Specific Folders
-v2/bin
-v2/include
-v2/opt
+bin
 
 # Compiled Object files
 *.slo
