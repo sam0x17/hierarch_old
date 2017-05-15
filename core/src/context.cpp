@@ -5,9 +5,15 @@ namespace Hierarch {
   }
 
   Context::~Context() {
+    this->imaginary_predecessors.clear();
     for(auto i : this->nodes) {
       Node *node = i.second;
       delete node;
     }
+    this->nodes.clear();
+  }
+
+  ContextBase::~ContextBase() {
+    this->imaginary_predecessors.clear();
   }
 }

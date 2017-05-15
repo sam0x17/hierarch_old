@@ -34,7 +34,6 @@ namespace Hierarch {
 
   void delete_context() {
     assert(ctx != NULL);
-    ctx->~Context();
     contexts.erase(ctx->context_id);
     ctx = NULL;
     node_cursor = NULL;
@@ -65,6 +64,7 @@ namespace Hierarch {
 
   node_id_t add_leaf() {
     assert(ctx != NULL);
+    ctx->max_index++;
     // node displacement and insertion
     Node *node = new Node();
     node->id = gen_node_id();
@@ -79,22 +79,36 @@ namespace Hierarch {
       successor = parent->successor;
     }
     if(successor != NULL) { // if there is a successor
+      assert(successor != parent);
       node->base_index = successor->index();
+      assert(successor->mod == ctx->mod);
+      assert(successor->offset == 0);
       successor->displace(+1); // displace successor, since we have taken its index
+      assert(successor->base_index == node->base_index + 1);
       assert(parent->mod == ctx->mod);
     } else { // successor is imaginary
-      node->base_index = ++ctx->max_index;
       if(parent == NULL) { // first node in empty tree
         assert(ctx->max_index == 1);
-        ctx->max_index = 0;
         node->base_index = 0;
         node->offset = 0;
         node->mod = ++ctx->mod;
       } else {
         parent->displace(0); // mark all nodes in path from parent to root as up-to-date
+        node->base_index = ctx->max_index - 1;
+        assert(node->base_index > parent->base_index);
+        node->offset = 0;
+        node->mod = ctx->mod;
         assert(parent->mod == ctx->mod);
       }
     }
+
+    // perform avl insertion
+    node->mod = ctx->mod;
+    avl_insert(&node->context()->atree, &node->avl, cmp_func); // make avl insertion
+    node->index();
+    assert(node->offset == 0);
+    if(parent != NULL) assert(node->index() > parent->index());
+    if(successor != NULL) assert(node->index() < successor->index());
 
     // successor adjustment
     std::vector<AvlNode*> *predecessors;
@@ -102,52 +116,28 @@ namespace Hierarch {
       predecessors = &successor->predecessors;
       node->successor = successor;
     } else predecessors = &ctx->imaginary_predecessors;
-    for(AvlNode *predecessor : *predecessors) // for each predecessor of displaced node
-      if(predecessor->index() < node->base_index)
+    std::vector<AvlNode*> modified_predecessors;
+    modified_predecessors.push_back(node);
+    index_t parent_index = node->node()->parent_index();
+    index_t pred_index;
+    for(AvlNode *predecessor : *predecessors) { // for each predecessor of displaced node
+      pred_index = predecessor->index();
+      if(pred_index > parent_index && pred_index < node->base_index) {
         predecessor->successor = node;
-    node->mod = ctx->mod;
-    avl_insert(&node->context()->atree, &node->avl, cmp_func); // make avl insertion
-    node->index();
-    return node->id;
-  }
-
-  /*node_id_t add_leaf() {
-    Node node_tmp;
-    node_tmp.id = gen_node_id();
-    ctx->nodes.insert({node_tmp.id, node_tmp});
-    Node *node = &ctx->nodes[node_tmp.id];
-    node->parent = node_cursor;
-    basic_op();
-    if(node_cursor != NULL) { // if there is a selected node
-      node->parent->apply_offset();
-      if(node->parent->successor != NULL) { // if there is a parent successor
-        node->parent->successor->applly_offset();
-        node->base_index = node->parent->successor->base_index;
-        node->successor = node->parent->successor;
-        for(AvlNode *predecessor : node->successor->predecessors) { // for each predecessor of parent's successor
-          basic_op();
-          if(predecessor->index() > node->parent->base_index) { // if a descendant of parent
-            predecessor->successor = node;
-          }
-        }
-      } else { // parent successor is imaginary
-        node->base_index = ctx->max_index;
+        node->predecessors.push_back(predecessor);
+      } else {
+        modified_predecessors.push_back(predecessor);
       }
-    } else {
-      assert(ctx->root == NULL); // must make a selection if there is a root
     }
-    ctx->max_index += offset;
+    if(node->successor == NULL) {
+      ctx->imaginary_predecessors.clear();
+      ctx->imaginary_predecessors = modified_predecessors;
+    } else {
+      successor->predecessors.clear();
+      successor->predecessors = modified_predecessors;
+    }
     return node->id;
   }
-
-  void propagate(AvlNode *changed_node, index_t offset) {
-    index_t reference = start_node->index();
-    for(AvlNode *cursor = start_node->avl_parent(); cursor != NULL; cursor = cursor->avl_parent()) {
-      //if(cursor->index
-      cursor->offset += offset;
-    }
-
-  }*/
 
   void apply_type(node_id_t node_id, type_id_t node_type);
 

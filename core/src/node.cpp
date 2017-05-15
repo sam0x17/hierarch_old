@@ -48,6 +48,18 @@ namespace Hierarch {
     return &ctx->types[this->type_id];
   }
 
+  index_t Node::parent_index() {
+    if(this->parent == NULL) return 0;
+    return this->parent->index();
+  }
+
+  index_t AvlNode::successor_index() {
+    assert(this != NULL);
+    assert(this->context() != NULL);
+    if(this->successor != NULL) return this->successor->index();
+    return this->context()->max_index;
+  }
+
   index_t AvlNode::index() {
     assert(this != NULL);
     assert(this->context() != NULL);
@@ -75,7 +87,7 @@ namespace Hierarch {
     if(this->avl_parent() != NULL)
       this->avl_parent()->displace_helper(delta, shift_start, mod);
     this->offset = 0;
-    if(this->base_index > shift_start)
+    if(this->base_index >= shift_start)
       this->base_index += delta;
     if(this->avl_left() != NULL && this->avl_left()->base_index > shift_start)
       this->avl_left()->offset += delta;
@@ -89,7 +101,6 @@ namespace Hierarch {
     index_t index = this->index();
     index_t mod = ++this->context()->mod;
     this->displace_helper(delta, index, mod);
-    this->context()->max_index += delta;
     assert(mod == this->context()->mod);
   }
 

@@ -36,6 +36,7 @@ namespace Hierarch {
     void displace_helper(index_t delta, index_t shift_start, index_t mod);
     Context *context();
     index_t index();
+    index_t successor_index();
     bool avl_is_left();
     bool avl_is_right();
     Node *node();
@@ -58,8 +59,7 @@ namespace Hierarch {
     bool is_root();
     bool is_leaf();
     bool is_interior();
-
-
+    index_t parent_index();
   };
 }
 
