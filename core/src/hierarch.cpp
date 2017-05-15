@@ -84,12 +84,12 @@ namespace Hierarch {
       assert(parent->mod == ctx->mod);
     } else { // successor is imaginary
       node->base_index = ++ctx->max_index;
-      if(parent == NULL) {
+      if(parent == NULL) { // first node in empty tree
         assert(ctx->max_index == 1);
         ctx->max_index = 0;
         node->base_index = 0;
         node->offset = 0;
-        assert(node->mod == ctx->mod);
+        node->mod = ++ctx->mod;
       } else {
         parent->displace(0); // mark all nodes in path from parent to root as up-to-date
         assert(parent->mod == ctx->mod);

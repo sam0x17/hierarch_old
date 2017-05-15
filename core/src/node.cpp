@@ -53,19 +53,11 @@ namespace Hierarch {
     assert(this->context() != NULL);
     basic_op();
     if(this->mod >= this->context()->mod) {
-    //if(this->avl_parent() == NULL) {
       assert(this->offset == 0);
       return this->base_index;
     }
-    /*if(this->avl_parent() == NULL) {
-      std::cout << "EXCEPTION AVL PARENT SHOULD NOT BE NULL" << std::endl;
-      std::cout << "this mod: " << this->mod << std::endl;
-      std::cout << "context mod: " << this->context()->mod << std::endl;
-    }
-    assert(this->avl_parent() != NULL);*/
     assert(this->avl_parent() != NULL);
     this->avl_parent()->index(); // recursive call
-    assert(this->avl_parent()->mod == this->context()->mod); // avl parent should be up-to-date
     assert(this->avl_parent()->offset == 0);
     if(this->avl_left() != NULL)
       this->avl_left()->offset += this->offset;
@@ -74,7 +66,7 @@ namespace Hierarch {
     this->base_index += this->offset;
     this->offset = 0;
     this->mod = this->avl_parent()->mod;
-    assert(this->avl_parent()->base_index < this->base_index);
+    assert(this->mod == this->context()->mod);
     return this->base_index;
   }
 

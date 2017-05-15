@@ -94,12 +94,15 @@ namespace HierarchTests {
     AvlNode *node5 = NULL;
     context_id_t context_id = create_context();
     switch_context(context_id);
+    assert(ctx->mod == 0);
     select_node(add_leaf());
+    assert(ctx->mod == 1);
     node1 = node_cursor;
     assert(node1->offset == 0);
     assert(node1->base_index == 0);
     assert(node1->avl_parent() == NULL);
     select_node(add_leaf());
+    assert(ctx->mod == 2);
     node2 = node_cursor;
     assert(node1 != node2);
     assert(node2->base_index == 1);
@@ -109,12 +112,14 @@ namespace HierarchTests {
     select_node(node1->node()->id);
     assert(node_cursor == node1);
     select_node(add_leaf());
+    assert(ctx->mod == 3);
     node3 = node_cursor;
     assert(node3 != node2);
     assert(node3->base_index == 2);
     assert(node3->offset == 0);
     select_node(node1->node()->id);
     select_node(add_leaf());
+    assert(ctx->mod == 4);
     node4 = node_cursor;
     assert(node4 != node3);
     assert(node4->base_index == 3);
@@ -122,10 +127,16 @@ namespace HierarchTests {
     select_node(node3->node()->id);
     assert(node_cursor == node3);
     select_node(add_leaf());
+    assert(ctx->mod == 5);
     node5 = node_cursor;
     assert(node5 != node4);
     assert(node5->index() == 4);
     assert(node5->node()->parent == node3->node());
+    assert(node1->index() == 0);
+    assert(node2->index() == 1);
+    assert(node3->index() == 2);
+    assert(node4->index() == 3);
+    assert(node5->index() == 4);
     delete_context();
     pass();
   }
