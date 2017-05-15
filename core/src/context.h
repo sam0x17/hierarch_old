@@ -12,7 +12,6 @@ namespace Hierarch {
     index_t mod = 0;
     std::vector<AvlNode*> imaginary_predecessors;
     ContextBase();
-    //~ContextBase();
   };
 
   class TypeContext : public ContextBase {
@@ -25,8 +24,10 @@ namespace Hierarch {
   public:
     context_id_t context_id;
     Node *root = NULL;
-    spp::sparse_hash_map<node_id_t, Node> nodes;
+    spp::sparse_hash_map<node_id_t, Node*> nodes;
     spp::sparse_hash_map<type_id_t, TypeContext> types;
+
+    ~Context();
   };
 }
 #endif

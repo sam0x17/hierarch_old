@@ -35,7 +35,7 @@ namespace Hierarch {
   void delete_context() {
     std::cout << "starting delete context" << std::endl;
     assert(ctx != NULL);
-    //ctx->~ContextBase();
+    ctx->~Context();
     contexts.erase(ctx->context_id);
     ctx = NULL;
     node_cursor = NULL;
@@ -61,20 +61,18 @@ namespace Hierarch {
   void select_node(node_id_t node_id) {
     assert(ctx != NULL);
     assert(ctx->nodes.contains(node_id));
-    node_cursor = &ctx->nodes[node_id];
+    node_cursor = ctx->nodes[node_id];
     assert(node_cursor->id == node_id);
   }
 
   node_id_t add_leaf() {
     assert(ctx != NULL);
     // node displacement and insertion
-    Node tmp;
-    tmp.id = gen_node_id();
-    assert(!ctx->nodes.contains(tmp.id));
-    ctx->nodes.insert({tmp.id, tmp});
-    assert(ctx->nodes.contains(tmp.id));
-    Node *node = &ctx->nodes[tmp.id];
-    assert(node->id == tmp.id);
+    Node *node = new Node();
+    node->id = gen_node_id();
+    assert(!ctx->nodes.contains(node->id));
+    ctx->nodes.insert({node->id, node});
+    assert(ctx->nodes.contains(node->id));
     assert(node->valid_node == 12345);
     node->parent = node_cursor;
     Node *parent = node->parent;

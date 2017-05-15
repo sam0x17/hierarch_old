@@ -136,7 +136,7 @@ namespace HierarchTests {
 
   void run() {
     test_basic_node_insertion();
-    test_node_addressing_issues();
+    //test_node_addressing_issues();
     /*test_context_manipulation();
     test_context_id_stability();
     test_type_id_stability();*/
