@@ -33,10 +33,13 @@ namespace Hierarch {
   }
 
   void delete_context() {
+    std::cout << "starting delete context" << std::endl;
     assert(ctx != NULL);
+    //ctx->~ContextBase();
     contexts.erase(ctx->context_id);
     ctx = NULL;
     node_cursor = NULL;
+    std::cout << "finished delete context" << std::endl;
   }
 
   Context *current_context() { return ctx; }
@@ -60,6 +63,57 @@ namespace Hierarch {
     assert(ctx->nodes.contains(node_id));
     node_cursor = &ctx->nodes[node_id];
     assert(node_cursor->id == node_id);
+  }
+
+  node_id_t add_leaf() {
+    assert(ctx != NULL);
+    // node displacement and insertion
+    Node tmp;
+    tmp.id = gen_node_id();
+    assert(!ctx->nodes.contains(tmp.id));
+    ctx->nodes.insert({tmp.id, tmp});
+    assert(ctx->nodes.contains(tmp.id));
+    Node *node = &ctx->nodes[tmp.id];
+    assert(node->id == tmp.id);
+    assert(node->valid_node == 12345);
+    node->parent = node_cursor;
+    Node *parent = node->parent;
+    AvlNode *successor = NULL; // displaced node
+    if(parent != NULL) { // if there is a parent
+      parent->index();
+      successor = parent->successor;
+    }
+    if(successor != NULL) { // if there is a successor
+      node->base_index = successor->index();
+      successor->displace(+1); // displace successor, since we have taken its index
+      assert(parent->mod == ctx->mod);
+    } else { // successor is imaginary
+      node->base_index = ++ctx->max_index;
+      if(parent == NULL) {
+        assert(ctx->max_index == 1);
+        ctx->max_index = 0;
+        node->base_index = 0;
+        node->offset = 0;
+        assert(node->mod == ctx->mod);
+      } else {
+        parent->displace(0); // mark all nodes in path from parent to root as up-to-date
+        assert(parent->mod == ctx->mod);
+      }
+    }
+
+    // successor adjustment
+    std::vector<AvlNode*> *predecessors;
+    if(successor != NULL) {
+      predecessors = &successor->predecessors;
+      node->successor = successor;
+    } else predecessors = &ctx->imaginary_predecessors;
+    for(AvlNode *predecessor : *predecessors) // for each predecessor of displaced node
+      if(predecessor->index() < node->base_index)
+        predecessor->successor = node;
+    node->mod = ctx->mod;
+    avl_insert(&node->context()->atree, &node->avl, cmp_func); // make avl insertion
+    node->index();
+    return node->id;
   }
 
   /*node_id_t add_leaf() {

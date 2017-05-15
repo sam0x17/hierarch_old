@@ -1,13 +1,26 @@
 
 namespace Hierarch {
+  AvlNode::AvlNode() {
+    this->avl.left = NULL;
+    this->avl.right = NULL;
+    std::cout << "initialized" << std::endl;
+  }
+
   AvlNode *AvlNode::avl_parent() {
-    return (AvlNode *)(this->avl.parent);
+    assert(this != NULL);
+    assert(this->valid_node == 12345);
+    return (AvlNode *)(_avl_parent(&this->avl));
   }
 
   AvlNode *AvlNode::avl_left() {
+    assert(this != NULL);
+    assert(this->valid_node == 12345);
     return (AvlNode *)(this->avl.left);
   }
+
   AvlNode *AvlNode::avl_right() {
+    assert(this != NULL);
+    assert(this->valid_node == 12345);
     return (AvlNode *)(this->avl.right);
   }
 
@@ -40,9 +53,21 @@ namespace Hierarch {
   }
 
   index_t AvlNode::index() {
+    assert(this != NULL);
+    assert(this->context() != NULL);
     basic_op();
-    if(this->mod >= this->context()->mod)
+    if(this->mod >= this->context()->mod) {
+    //if(this->avl_parent() == NULL) {
+      assert(this->offset == 0);
+      std::cout << "A index() call succeeded, returning this->base_index = " << this->base_index << std::endl;
       return this->base_index;
+    }
+    /*if(this->avl_parent() == NULL) {
+      std::cout << "EXCEPTION AVL PARENT SHOULD NOT BE NULL" << std::endl;
+      std::cout << "this mod: " << this->mod << std::endl;
+      std::cout << "context mod: " << this->context()->mod << std::endl;
+    }
+    assert(this->avl_parent() != NULL);*/
     assert(this->avl_parent() != NULL);
     this->avl_parent()->index(); // recursive call
     assert(this->avl_parent()->mod == this->context()->mod); // avl parent should be up-to-date
@@ -55,10 +80,12 @@ namespace Hierarch {
     this->offset = 0;
     this->mod = this->avl_parent()->mod;
     assert(this->avl_parent()->base_index < this->base_index);
+    std::cout << "B index() call succeeded, returning this->base_index = " << this->base_index << std::endl;
     return this->base_index;
   }
 
   void AvlNode::displace_helper(index_t delta, index_t shift_start, index_t mod) {
+    assert(this != NULL);
     if(this->avl_parent() != NULL)
       this->avl_parent()->displace_helper(delta, shift_start, mod);
     this->offset = 0;
@@ -72,7 +99,12 @@ namespace Hierarch {
   }
 
   void AvlNode::displace(index_t delta) {
-    this->displace_helper(delta, this->index(), ++this->context()->mod);
+    assert(this != NULL);
+    index_t index = this->index();
+    index_t mod = ++this->context()->mod;
+    this->displace_helper(delta, index, mod);
+    this->context()->max_index += delta;
+    assert(mod == this->context()->mod);
   }
 
   bool Node::is_root() {

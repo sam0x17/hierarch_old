@@ -12,6 +12,7 @@ namespace Hierarch {
     index_t mod = 0;
     std::vector<AvlNode*> imaginary_predecessors;
     ContextBase();
+    //~ContextBase();
   };
 
   class TypeContext : public ContextBase {
