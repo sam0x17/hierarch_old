@@ -33,13 +33,11 @@ namespace Hierarch {
   }
 
   void delete_context() {
-    std::cout << "starting delete context" << std::endl;
     assert(ctx != NULL);
     ctx->~Context();
     contexts.erase(ctx->context_id);
     ctx = NULL;
     node_cursor = NULL;
-    std::cout << "finished delete context" << std::endl;
   }
 
   Context *current_context() { return ctx; }
@@ -73,7 +71,6 @@ namespace Hierarch {
     assert(!ctx->nodes.contains(node->id));
     ctx->nodes.insert({node->id, node});
     assert(ctx->nodes.contains(node->id));
-    assert(node->valid_node == 12345);
     node->parent = node_cursor;
     Node *parent = node->parent;
     AvlNode *successor = NULL; // displaced node

@@ -4,16 +4,18 @@ namespace HierarchTests {
   void pass() { std::cout << "OK" << std::endl; }
 
   void test_node_addressing_issues() {
+    std::cout << "test_node_addressing_issues... " << std::flush;
     switch_context(create_context());
-    AvlNode node;
-    assert((void *)(&node) == (void *)(&node.avl));
-    assert(node.avl_parent() == NULL);
-    assert(node.avl_left() == NULL);
-    assert(node.avl_right() == NULL);
-    avl_insert(&node.context()->atree, &node.avl, cmp_func); // make avl insertion
-    assert(node.avl_parent() == NULL);
-    assert(node.avl_left() == NULL);
-    assert(node.avl_right() == NULL);
+    AvlNode *node = new Node();
+    assert((void *)(node) == (void *)(&node->avl));
+    assert(node->avl_parent() == NULL);
+    assert(node->avl_left() == NULL);
+    assert(node->avl_right() == NULL);
+    avl_insert(&node->context()->atree, &node->avl, cmp_func); // make avl insertion
+    assert(node->avl_parent() == NULL);
+    assert(node->avl_left() == NULL);
+    assert(node->avl_right() == NULL);
+    delete node;
     delete_context();
     pass();
   }
@@ -97,7 +99,6 @@ namespace HierarchTests {
     assert(node1->offset == 0);
     assert(node1->base_index == 0);
     assert(node1->avl_parent() == NULL);
-    std::cout << "added node 1 id=" << node1->node()->id << std::endl;
     select_node(add_leaf());
     node2 = node_cursor;
     assert(node1 != node2);
@@ -107,39 +108,34 @@ namespace HierarchTests {
     assert(node1->avl_left() == node2);
     select_node(node1->node()->id);
     assert(node_cursor == node1);
-    std::cout << "added node 2 id=" << node2->node()->id << std::endl;
     select_node(add_leaf());
     node3 = node_cursor;
     assert(node3 != node2);
     assert(node3->base_index == 2);
     assert(node3->offset == 0);
     select_node(node1->node()->id);
-    std::cout << "added node 3" << std::endl;
     select_node(add_leaf());
     node4 = node_cursor;
     assert(node4 != node3);
     assert(node4->base_index == 3);
     assert(node4->offset == 0);
-    select_node(node1->node()->id);
-    std::cout << "added node 4" << std::endl;
     select_node(node3->node()->id);
     assert(node_cursor == node3);
     select_node(add_leaf());
     node5 = node_cursor;
     assert(node5 != node4);
     assert(node5->index() == 4);
-    std::cout << "added node 5" << std::endl;
+    assert(node5->node()->parent == node3->node());
     delete_context();
     pass();
-    std::cout << "moving on to next tests" << std::endl;
   }
 
   void run() {
     test_basic_node_insertion();
-    //test_node_addressing_issues();
-    /*test_context_manipulation();
+    test_node_addressing_issues();
+    test_context_manipulation();
     test_context_id_stability();
-    test_type_id_stability();*/
+    test_type_id_stability();
     std::cout << std::endl;
   }
 }

@@ -19,7 +19,6 @@ namespace Hierarch {
     index_t mod = 0;
     AvlNode *successor = NULL;
     std::vector<AvlNode*> predecessors;
-    int valid_node = 12345;
 
     // when we add a (leaf) node, go to its parent's successor, for each predecessor (except for parent),
     //   if predecessor index is greater than the parent's index, change predecessor to point to new node

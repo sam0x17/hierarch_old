@@ -3,24 +3,20 @@ namespace Hierarch {
   AvlNode::AvlNode() {
     this->avl.left = NULL;
     this->avl.right = NULL;
-    std::cout << "initialized" << std::endl;
   }
 
   AvlNode *AvlNode::avl_parent() {
     assert(this != NULL);
-    assert(this->valid_node == 12345);
     return (AvlNode *)(_avl_parent(&this->avl));
   }
 
   AvlNode *AvlNode::avl_left() {
     assert(this != NULL);
-    assert(this->valid_node == 12345);
     return (AvlNode *)(this->avl.left);
   }
 
   AvlNode *AvlNode::avl_right() {
     assert(this != NULL);
-    assert(this->valid_node == 12345);
     return (AvlNode *)(this->avl.right);
   }
 
@@ -59,7 +55,6 @@ namespace Hierarch {
     if(this->mod >= this->context()->mod) {
     //if(this->avl_parent() == NULL) {
       assert(this->offset == 0);
-      std::cout << "A index() call succeeded, returning this->base_index = " << this->base_index << std::endl;
       return this->base_index;
     }
     /*if(this->avl_parent() == NULL) {
@@ -80,7 +75,6 @@ namespace Hierarch {
     this->offset = 0;
     this->mod = this->avl_parent()->mod;
     assert(this->avl_parent()->base_index < this->base_index);
-    std::cout << "B index() call succeeded, returning this->base_index = " << this->base_index << std::endl;
     return this->base_index;
   }
 
